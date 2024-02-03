@@ -5,6 +5,8 @@ import polars as pl
 import seaborn as sns
 import pulp
 from datetime import date
+import jpholiday
+import datetime
 
 #%%
 # read csv data
@@ -22,5 +24,6 @@ dat2= pl.DataFrame({
     eager=True),
     **{chr(65+i): np.random.choice(["no", "soso", "good"], replace=True, p=[0.5, 0.3, 0.2], size=31) for i in range(26)}
 })
+
 
 

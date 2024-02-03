@@ -232,4 +232,6 @@ dependencies:
   - zlib=1.2.13=h5eee18b_0
   - zstandard=0.19.0=py311h5eee18b_0
   - zstd=1.5.5=hc292b87_0
+  - pip:
+      - jpholiday==0.1.8
 prefix: /opt/conda
