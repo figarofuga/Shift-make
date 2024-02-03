@@ -27,3 +27,5 @@ dat2= pl.DataFrame({
 
 
 
+
+# %%
