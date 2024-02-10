@@ -26,11 +26,22 @@ dat=pl.read_csv("testshiftdata.csv")
 # })
 
 # convert "date" column to date type column 
+def is_holiday(date):
+    return jpholiday.is_holiday(date)
+
+# Define a function that checks if a date is a holiday
 
 dat2=(dat.with_columns(
     [pl.col("date")
         .str.strptime(pl.Date,
-                      strict=False)])
+                      strict=False)
+# make date column to date type to concordant with jpholiday package
+        .apply(lambda x: datetime.date(x.year, x.month, x.day))
+        .apply(is_holiday).alias("holiday")])
+                  
 )
 
+
+
+# `holiday` column will be of type Boolean: True if the date is a holiday, False otherwise
 # %%
