@@ -10,7 +10,7 @@ import datetime
 
 #%%
 # read csv data
-dat=pl.read_csv("testshiftdata.csv")
+dat=pl.read_excel("2024_03data.xlsx")
 
 #%%
 # make test data
