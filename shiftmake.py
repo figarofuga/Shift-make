@@ -28,8 +28,13 @@ dat2 = (dat
         .rename(lambda c: re.search(r"\d{1,2}(.*)\)", c).group())
 )
 
-dat3 = pl.concat([dat.select(all_columns[start_index:start_index+4]), 
+dat3 = (pl.concat([dat.select(all_columns[start_index:start_index+4]), 
                  dat2], how="horizontal")
+          .with_columns([pl.col("タイムスタンプ").str.strptime(pl.Datetime, "%m/%d/%Y %H:%M:%S")])
+          .sort("タイムスタンプ")
+          .group_by("お名前", maintain_order=True).last()
+
+)
 
 
 # `holiday` column will be of type Boolean: True if the date is a holiday, False otherwise
