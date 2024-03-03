@@ -39,3 +39,5 @@ dat3 = (pl.concat([dat.select(all_columns[start_index:start_index+4]),
 
 # `holiday` column will be of type Boolean: True if the date is a holiday, False otherwise
 # %%
+dat3.write_csv("2024_03_prep.csv")
+# %%
