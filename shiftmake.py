@@ -33,6 +33,11 @@ dat3 = (pl.concat([dat.select(all_columns[start_index:start_index+4]),
           .with_columns([pl.col("タイムスタンプ").str.strptime(pl.Datetime, "%m/%d/%Y %H:%M:%S")])
           .sort("タイムスタンプ")
           .group_by("お名前", maintain_order=True).last()
+          .drop(['タイムスタンプ', 'メールアドレス'])
+          .rename({'お名前': 'name', '現在在籍・研修中の科でお願いします': 'department'})
+          .melt(id_vars=['name', 'department'], 
+                variable_name='date', 
+                value_name='request')
 
 )
 
