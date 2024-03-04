@@ -38,6 +38,9 @@ dat3 = (pl.concat([dat.select(all_columns[start_index:start_index+4]),
           .melt(id_vars=['name', 'department'], 
                 variable_name='date', 
                 value_name='request')
+          .with_columns([pl.when(pl.col("request") == "希望日").then(1)
+                         .when(pl.col("request").is_null()).then(0)
+                         .otherwise(-2).alias("request")])
 
 )
 
