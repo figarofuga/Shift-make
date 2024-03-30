@@ -10,20 +10,8 @@
 		"ms-python.vscode-pylance",
 		"ms-toolsai.jupyter", 
 		"github.copilot"
-	],
-	"features": {
-		"ghcr.io/rocker-org/devcontainer-features/quarto-cli:1": {},
-		"ghcr.io/rocker-org/devcontainer-features/r-apt:0": {
-			"vscodeRSupport": "full", 
-			"installRadian": true
-		}, 
-		"ghcr.io/rocker-org/devcontainer-features/apt-packages:1": {
-        "packages": "r-cran-tidyverse"
-		}
-	},
-"overrideFeatureInstallOrder": [
-    "ghcr.io/rocker-org/devcontainer-features/r-apt"
-]
+	], 
+	"postCreateCommand": "pip install -r requirements.txt"
 	
 
 	// Features to add to the dev container. More info: https://containers.dev/features.

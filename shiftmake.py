@@ -3,33 +3,49 @@ import numpy as np
 import pandas as pd
 import polars as pl
 import seaborn as sns
-import pulp
 from datetime import date
-import jpholiday
 import datetime
 import re
 
 #%%
-# read csv data
-dat=pl.read_excel("2024_03data.xlsx")
-
+# read excel data
+dat = pl.read_excel("rawdata/2024_05answer.xlsx")
 #%%
 
-start_column='タイムスタンプ'
-stop_column='日直・当直希望についての備考'
-all_columns=dat.columns
+name_column = 'お名前'
+start_column = 'タイムスタンプ'
+tochoku_stop_column = '日直・当直希望についての備考'
+icijikyu_stop_column = '1次救急希望についての備考'
+all_columns = dat.columns
 
-start_index=all_columns.index(start_column)
-stop_index=all_columns.index(stop_column)
+name_index = all_columns.index(name_column)
+start_index = all_columns.index(start_column)
+tochoku_stop_index = all_columns.index(tochoku_stop_column)
+ichijikyu_stop_index = all_columns.index(icijikyu_stop_column)
 
+# 列名を変更する関数を定義
+def extract_date(col_name):
+    match = re.search(r'\[(\d{1,2}/\d{1,2}\([日月火水木金土祝]\))\]', col_name)
+    return match.group(1) if match else col_name
 
-dat2 = (dat
-        .select(all_columns[(start_index+4):stop_index])
-        .rename(lambda c: re.search(r"\d{1,2}(.*)\)", c).group())
+# base data
+base_data = (dat
+             .select(all_columns[start_index:(name_index + 1)])
+             )
+
+# subset of toschoku data
+tochoku_data = (dat
+             .select(all_columns[(name_index+2):tochoku_stop_index])
+             .rename(lambda col_name: extract_date(col_name))
+             )
+
+ichijikyu_data = (dat
+                  .select(all_columns[(tochoku_stop_index+1):ichijikyu_stop_index])
+                  .rename(lambda col_name: extract_date(col_name))
 )
+# subset of ichijikyu data
 
-dat3 = (pl.concat([dat.select(all_columns[start_index:start_index+4]), 
-                 dat2], how="horizontal")
+tochoku_data_prep = (pl.concat([base_data, tochoku_data], how="horizontal")
           .with_columns([pl.col("タイムスタンプ").str.strptime(pl.Datetime, "%m/%d/%Y %H:%M:%S")])
           .sort("タイムスタンプ")
           .group_by("お名前", maintain_order=True).last()
@@ -38,15 +54,33 @@ dat3 = (pl.concat([dat.select(all_columns[start_index:start_index+4]),
           .melt(id_vars=['name', 'department'], 
                 variable_name='date', 
                 value_name='request')
-          .with_columns([pl.when(pl.col("request") == "希望日").then(1)
-                         .when(pl.col("request").is_null()).then(0)
-                         .otherwise(-2).alias("request")])
-          .pivot(values = 'request', index = ['name', 'department'], columns = 'date')
-
+          .drop('department')
 )
 
-
-# `holiday` column will be of type Boolean: True if the date is a holiday, False otherwise
+ichijikyu_data_prep = (pl.concat([base_data, ichijikyu_data], how="horizontal")
+          .with_columns([pl.col("タイムスタンプ").str.strptime(pl.Datetime, "%m/%d/%Y %H:%M:%S")])
+          .sort("タイムスタンプ")
+          .group_by("お名前", maintain_order=True).last()
+          .drop(['タイムスタンプ', 'メールアドレス'])
+          .rename({'お名前': 'name', '現在在籍・研修中の科でお願いします': 'department'})
+          .melt(id_vars=['name', 'department'], 
+                variable_name='date', 
+                value_name='request')
+          .drop('department')
+)
+ 
 # %%
-dat3.write_csv("2024_03_prep.csv")
+
+dat_notes = pl.read_excel("rawdata/notes_data.xlsx")
+
+# %%
+
+notes_tochoku_data_prep = (dat_notes
+                           .select(['人', '\u3000日付', '日直・当直'])
+                           .rename({"人": "name", 
+                                    "\u3000日付": "date",
+                                    "日直・当直": "request"}))
+
+tochoku_data = pl.concat([tochoku_data_prep, notes_tochoku_data_prep], 
+                         how="vertical")
 # %%
