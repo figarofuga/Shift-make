@@ -84,3 +84,14 @@ notes_tochoku_data_prep = (dat_notes
 tochoku_data = pl.concat([tochoku_data_prep, notes_tochoku_data_prep], 
                          how="vertical")
 # %%
+
+notes_ichijikyu_data_prep = (dat_notes
+                           .select(['人', '\u3000日付', '一次救急'])
+                           .rename({"人": "name", 
+                                    "\u3000日付": "date",
+                                    "一次救急": "request"}))
+
+ichijikyu_data = pl.concat([ichijikyu_data_prep, notes_ichijikyu_data_prep], 
+                         how="vertical")
+
+# %%
