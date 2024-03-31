@@ -79,7 +79,27 @@ notes_tochoku_data_prep = (dat_notes
                            .select(['人', '\u3000日付', '日直・当直'])
                            .rename({"人": "name", 
                                     "\u3000日付": "date",
-                                    "日直・当直": "request"}))
+                                    "日直・当直": "request"})
+                           .with_columns([
+                               pl.when(pl.col("request").is_in(["　", " "]))
+                               .then(None)
+                               .when(pl.col("request") == '\u3000○１')
+                               .then(pl.lit("第一希望日"))
+                               .when(pl.col("request") == '\u3000○２')
+                               .then(pl.lit("第二希望日"))
+                               .when(pl.col("request") == '\u3000○３')
+                               .then(pl.lit("第三希望日"))
+                               .when(pl.col("request") == '\u3000○４')
+                               .then(pl.lit("第四希望日"))
+                               .when(pl.col("request") == '\u3000○')
+                               .then(pl.lit("希望日"))
+                               .when(pl.col("request") == '\u3000')
+                               .then(None).otherwise(pl.lit("不可日")).alias("request")
+                               ])
+)                   
+                                    
+                                    
+                                    
 
 tochoku_data = pl.concat([tochoku_data_prep, notes_tochoku_data_prep], 
                          how="vertical")
@@ -89,9 +109,44 @@ notes_ichijikyu_data_prep = (dat_notes
                            .select(['人', '\u3000日付', '一次救急'])
                            .rename({"人": "name", 
                                     "\u3000日付": "date",
-                                    "一次救急": "request"}))
+                                    "一次救急": "request"})
+                           .with_columns([
+                               pl.when(pl.col("request").is_in(["　", " "]))
+                               .then(None)
+                               .when(pl.col("request") == '\u3000○')
+                               .then(pl.lit("希望日"))
+                               .otherwise(pl.lit("不可日")).alias("request")
+                               ]    
+                                    ))
+
+
+
+# notes_ichijikyu_data_prep['request'].unique().to_list()
 
 ichijikyu_data = pl.concat([ichijikyu_data_prep, notes_ichijikyu_data_prep], 
                          how="vertical")
+
+
+# %%
+notes_ichijikyu_data_prep
+dat_transformed = (notes_ichijikyu_data_prep.filter(pl.col("request") != "")
+                    .group_by(["name", "request"])
+                    .agg(pl.col("date").list().alias("dates"))
+                    .pivot(pivot_column="request", values_column="dates")
+                    .fill_none("")
+                    .with_columns([pl.col("◯").apply(lambda x: ','.join(x) if x else ""),
+                                   pl.col("x").apply(lambda x: ','.join(x) if x else ""),
+                                   pl.col("X").apply(lambda x: ','.join(x) if x else ""),
+                                   pl.col("◯1").apply(lambda x: ','.join(x) if x else "")])
+                 )
+# %%
+# グループ化とカスタム集約を定義
+def aggregate_dates(series: pl.Series) -> str:
+    return ",".join(series.to_list())
+
+tmp = (notes_tochoku_data_prep 
+    .groupby("name") 
+    .agg(pl.col("date").apply(aggregate_dates).alias("不可日")) 
+)
 
 # %%
