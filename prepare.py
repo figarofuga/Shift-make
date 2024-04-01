@@ -128,25 +128,22 @@ ichijikyu_data = pl.concat([ichijikyu_data_prep, notes_ichijikyu_data_prep],
 
 
 # %%
-notes_ichijikyu_data_prep
-dat_transformed = (notes_ichijikyu_data_prep.filter(pl.col("request") != "")
-                    .group_by(["name", "request"])
-                    .agg(pl.col("date").list().alias("dates"))
-                    .pivot(pivot_column="request", values_column="dates")
-                    .fill_none("")
-                    .with_columns([pl.col("◯").apply(lambda x: ','.join(x) if x else ""),
-                                   pl.col("x").apply(lambda x: ','.join(x) if x else ""),
-                                   pl.col("X").apply(lambda x: ','.join(x) if x else ""),
-                                   pl.col("◯1").apply(lambda x: ','.join(x) if x else "")])
-                 )
-# %%
-# グループ化とカスタム集約を定義
-def aggregate_dates(series: pl.Series) -> str:
-    return ",".join(series.to_list())
+ichijikyu_wide = (ichijikyu_data
+       .group_by(['name', 'request'])
+       .agg(pl.col('date'))
+       .filter(~pl.col('request').is_null())
+       .pivot(index='name', columns='request', values='date')
+       
+       )
 
-tmp = (notes_tochoku_data_prep 
-    .groupby("name") 
-    .agg(pl.col("date").apply(aggregate_dates).alias("不可日")) 
+# %%
+
+tochoku_wide = (tochoku_data
+       .group_by(['name', 'request'])
+       .agg(pl.col('date'))
+       .filter(~pl.col('request').is_null())
+       .pivot(index='name', columns='request', values='date')
+
 )
 
 # %%
