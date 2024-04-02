@@ -147,3 +147,6 @@ tochoku_wide = (tochoku_data
 )
 
 # %%
+
+tochoku_wide.write_excel("tochoku_wide.xlsx")
+# %%
