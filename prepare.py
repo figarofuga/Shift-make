@@ -143,6 +143,7 @@ tochoku_wide = (tochoku_data
        .agg(pl.col('date'))
        .filter(~pl.col('request').is_null())
        .pivot(index='name', columns='request', values='date')
+       .with_columns(pl.col('不可日').apply(lambda x: ' ,'.join(x)).alias('不可日'))
 
 )
 
@@ -150,3 +151,4 @@ tochoku_wide = (tochoku_data
 
 tochoku_wide.write_excel("tochoku_wide.xlsx")
 # %%
+
