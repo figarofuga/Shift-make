@@ -143,7 +143,7 @@ tochoku_wide = (tochoku_data
        .agg(pl.col('date'))
        .filter(~pl.col('request').is_null())
        .pivot(index='name', columns='request', values='date')
-       .with_columns(pl.col('不可日').apply(lambda x: ' ,'.join(x)).alias('不可日'))
+       .with_columns(pl.col(col).apply(lambda x: ' ,'.join(x)).alias(col) for col in ['不可日', '希望日', '第一希望日', '第二希望日', '第三希望日', '第四希望日'])
 
 )
 
