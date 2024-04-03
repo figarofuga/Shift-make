@@ -80,29 +80,22 @@ notes_tochoku_data_prep = (dat_notes
                            .rename({"人": "name", 
                                     "\u3000日付": "date",
                                     "日直・当直": "request"})
-                           .with_columns([
-                               pl.when(pl.col("request").is_in(["　", " "]))
-                               .then(None)
-                               .when(pl.col("request") == '\u3000○１')
-                               .then(pl.lit("第一希望日"))
-                               .when(pl.col("request") == '\u3000○２')
-                               .then(pl.lit("第二希望日"))
-                               .when(pl.col("request") == '\u3000○３')
-                               .then(pl.lit("第三希望日"))
-                               .when(pl.col("request") == '\u3000○４')
-                               .then(pl.lit("第四希望日"))
-                               .when(pl.col("request") == '\u3000○')
-                               .then(pl.lit("希望日"))
-                               .when(pl.col("request") == '\u3000')
-                               .then(None).otherwise(pl.lit("不可日")).alias("request")
-                               ])
-)                   
+                               )
+                   
                                     
                                     
                                     
 
-tochoku_data = pl.concat([tochoku_data_prep, notes_tochoku_data_prep], 
+tochoku_data = (pl.concat([tochoku_data_prep, notes_tochoku_data_prep], 
                          how="vertical")
+                  .with_columns(pl.all().str.strip())       
+                  .with_columns(pl.when(pl.col('request') == '')
+                                .then(None)       
+                                .otherwise(pl.col('request')).alias('request')
+                                )
+                         )
+
+
 # %%
 
 notes_ichijikyu_data_prep = (dat_notes
@@ -123,32 +116,40 @@ notes_ichijikyu_data_prep = (dat_notes
 
 # notes_ichijikyu_data_prep['request'].unique().to_list()
 
-ichijikyu_data = pl.concat([ichijikyu_data_prep, notes_ichijikyu_data_prep], 
+ichijikyu_data = (pl.concat([ichijikyu_data_prep, notes_ichijikyu_data_prep], 
                          how="vertical")
+                    .with_columns(pl.all().str.strip())
 
-
+)
 # %%
+
+ichijikyu_answer_list = filter(None, ichijikyu_data['request'].unique().to_list())
+
 ichijikyu_wide = (ichijikyu_data
        .group_by(['name', 'request'])
        .agg(pl.col('date'))
        .filter(~pl.col('request').is_null())
        .pivot(index='name', columns='request', values='date')
-       
+       .with_columns(pl.col(col).apply(lambda x: ' ,'.join(x)).alias(col) for col in ichijikyu_answer_list)
        )
 
 # %%
+
+tochoku_answer_list = filter(None, tochoku_data['request'].unique().to_list())
 
 tochoku_wide = (tochoku_data
        .group_by(['name', 'request'])
        .agg(pl.col('date'))
        .filter(~pl.col('request').is_null())
        .pivot(index='name', columns='request', values='date')
-       .with_columns(pl.col(col).apply(lambda x: ' ,'.join(x)).alias(col) for col in ['不可日', '希望日', '第一希望日', '第二希望日', '第三希望日', '第四希望日'])
+       .with_columns(pl.col(col).apply(lambda x: ' ,'.join(x)).alias(col) for col in tochoku_answer_list)
 
 )
 
 # %%
 
 tochoku_wide.write_excel("tochoku_wide.xlsx")
-# %%
+ichijikyu_wide.write_excel("ichijikyu_wide.xlsx")
 
+
+# %%
