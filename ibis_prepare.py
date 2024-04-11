@@ -1,9 +1,14 @@
 #%%
+import pandas as pd
 import ibis
+from ibis import _
+import ibis.selectors as s
+ibis.options.interactive = True
 
-con = ibis.pandas.connect()
-
+ibis.set_backend("pandas")
 # %%
 # read excel data
-dat = con.read_excel("rawdata/2024_05answer.xlsx")
+dat = pd.read_excel("rawdata/2024_05answer.xlsx")
+# %%
+t = ibis.memtable(dat, name="t")
 # %%
