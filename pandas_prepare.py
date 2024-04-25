@@ -26,10 +26,12 @@ comment_dat = (dat.filter(['タイムスタンプ', 'お名前', '日直・当�
                      .rename(columns={'お名前': 'name'})
 )
 
-#%%
-
-all_columns = dat.columns
-
+notes_comment_dat = (dat_notes.filter(['人', '日当直備考', '一次救急備考', 'ICU勤務備考'])
+             .rename(columns={"人": "name", 
+                               "日当直備考": "日直・当直希望についての備考",
+                               "一次救急備考": "1次救急希望についての備考",
+                               "ICU勤務備考": "ICU勤務希望についての備考"})
+)
 
 # 列名を変更する関数
 def extract_date(column_name):
@@ -88,12 +90,16 @@ for i in spplist:
                             value_name='request', 
                             ignore_index=False)
                      )
+    
+    # Notesデータと結合
+
     if i == 'tochoku':
         colname = '日直・当直'
     elif i == 'ichijikyu':
         colname = '一次救急'
     elif i == 'ICU':
         colname = 'ICU勤務'
+
     notes_data = (dat_notes
              .filter(['人', '日付', colname])
              .rename(columns={"人": "name", 
@@ -109,17 +115,33 @@ for i in spplist:
              .reset_index()
              .pivot(index='name', columns='request', values='date')    
     )
-    tmp.append(data_wide)
-
-                                    
+    columns_ok = data_wide.filter(items = ['○', '◯', '希望日']).columns
+    if not columns_ok.empty:
+        # 該当する列のデータをコンマ区切りで結合
+        data_wide['accept'] = data_wide[columns_ok].apply(lambda x: ', '.join(x.dropna().astype(str)), axis=1)
     
+    columns_bad = data_wide.filter(items=['×', '✕', '不可日']).columns
+    if not columns_bad.empty:
+        # 該当する列のデータをコンマ区切りで結合
+        data_wide['reject'] = data_wide[columns_bad].apply(lambda x: ', '.join(x.dropna().astype(str)), axis=1)
+
+    data_wide = data_wide.drop(columns=columns_ok).drop(columns=columns_bad)
+
+    data_all = (data_wide
+                .merge(comment_dat, on='name', how='left')
+                .merge(notes_comment_dat, on='name', how='left')
+                .assign(**{'日直・当直希望についての備考': lambda x: x['日直・当直希望についての備考_x'].combine_first(x['日直・当直希望についての備考_x'])})
+                .assign(**{'1次救急希望についての備考': lambda x: x['1次救急希望についての備考_x'].combine_first(x['1次救急希望についての備考_x'])})
+                .assign(ICU勤務希望についての備考=lambda x: x['ICU勤務希望についての備考_x'].combine_first(x['ICU勤務希望についての備考_x']))
+                .drop(['日直・当直希望についての備考_x', '日直・当直希望についての備考_y', '1次救急希望についての備考_x', '1次救急希望についての備考_y', 'ICU勤務希望についての備考_x', 'ICU勤務希望についての備考_y'], axis = 1)
+                .assign(species = i))
+    
+    data_all.to_excel(f"{i}_6.xlsx")
+
+    tmp.append(data_all)
 
 # %%
 
-tochoku_wide.merge(comment_dat, on='name', how='left').to_excel("tochoku_wide.xlsx")
-
-#%%
-ichijikyu_wide.merge(comment_dat, on='name', how='left').to_excel("ichijikyu_wide.xlsx")
-
+pd.concat(tmp).to_excel("tochoku_all_6.xlsx")
 
 # %%
