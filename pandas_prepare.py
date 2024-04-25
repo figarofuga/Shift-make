@@ -9,11 +9,11 @@ import re
 
 #%%
 # read excel data
-dat = pd.read_excel("rawdata/2024_05answer.xlsx")
+dat = pd.read_excel("rawdata/2024_06answer.xlsx")
 #%%
 
 comment_dat = (dat.filter(['タイムスタンプ', 'お名前', '日直・当直希望についての備考', '1次救急希望についての備考',
-       'このアンケート対する意見があればお願いします。'])
+       'ICU勤務希望についての備考', 'このアンケート対する意見があればお願いします。'])
        .assign(タイムスタンプ=lambda x: pd.to_datetime(x['タイムスタンプ']))
                      .sort_values(by='タイムスタンプ', ascending=True)
                      .groupby('お名前')
@@ -25,49 +25,59 @@ comment_dat = (dat.filter(['タイムスタンプ', 'お名前', '日直・当�
 
 #%%
 
-name_column = 'お名前'
-start_column = 'タイムスタンプ'
-tochoku_stop_column = '日直・当直希望についての備考'
-icijikyu_stop_column = '1次救急希望についての備考'
 all_columns = dat.columns
 
-name_index = all_columns.get_loc(name_column)
-start_index = all_columns.get_loc(start_column)
-tochoku_stop_index = all_columns.get_loc(tochoku_stop_column)
-ichijikyu_stop_index = all_columns.get_loc(icijikyu_stop_column)
 
 # 列名を変更する関数
 def extract_date(column_name):
-    match = re.search(r"\[(\d+/\d+\(.\))\]", column_name)
+    match = re.search(r'\d+月\d+日', column_name)
     if match:
-        return match.group(1)  # 日付部分のみを返す
+        return match.group()  # 日付部分のみを返す
     return column_name  # マッチしない場合は元の列名を返す
 
 # base data
 base_data = (dat
-             .filter(all_columns[start_index:(name_index + 1)])
+             .filter(['タイムスタンプ', 'お名前', 'あなたの専門はなんですか?', 'あなたは医師何年目ですか?'])
              )
 
 # subset of toschoku data
+
 tochoku_data = (dat
-             .filter(all_columns[(name_index+1):tochoku_stop_index])
+             .filter(regex = r'日直・当直希望.*\d月\d日')
              .rename(columns=extract_date)
              )
 
+ICU_data = (dat
+            .filter(regex = r'ICU勤務.*\d月\d日')
+            .rename(columns=extract_date)
+)
+
 ichijikyu_data = (dat
-                  .filter(all_columns[(tochoku_stop_index+1):ichijikyu_stop_index])
+                  .filter(regex = r'1次救急.*\d月\d日')
                   .rename(columns=extract_date)
 )
+
 #%%
+tmp = []
 
-# subset of ichijikyu data
-
-tochoku_data_prep = (pd.concat([base_data, tochoku_data], axis=1)
+spplist = ['tochoku', 'ichijikyu', 'ICU']
+for i in spplist:
+    if i == 'tochoku':
+        regex = r'日直・当直希望.*\d月\d日'
+    elif i == 'ichijikyu':
+        regex = r'1次救急.*\d月\d日'
+    elif i == 'ICU':
+        regex = r'ICU勤務.*\d月\d日'
+    data = (dat
+             .filter(regex = regex)
+       #       .rename(columns=extract_date)
+             )
+    prep_data = (pd.concat([base_data, data], axis=1)
                      .assign(タイムスタンプ=lambda x: pd.to_datetime(x['タイムスタンプ']))
                      .sort_values(by='タイムスタンプ', ascending=True)
                      .groupby('お名前')
                      .last()
-                     .drop(['タイムスタンプ', 'メールアドレス', '現在在籍・研修中の科でお願いします'], axis=1)
+                     .drop(['タイムスタンプ'], axis=1)
                      .reset_index()
                      .rename(columns={'お名前': 'name'})
                      .melt(id_vars=['name'], 
@@ -75,32 +85,18 @@ tochoku_data_prep = (pd.concat([base_data, tochoku_data], axis=1)
                             value_name='request', 
                             ignore_index=False)
                      )
+    tmp.append(prep_data)
 
-
-ichijikyu_data_prep = (pd.concat([base_data, ichijikyu_data], axis=1)
-                     .assign(タイムスタンプ=lambda x: pd.to_datetime(x['タイムスタンプ']))
-                     .sort_values(by='タイムスタンプ', ascending=True)
-                     .groupby('お名前')
-                     .last()
-                     .drop(['タイムスタンプ', 'メールアドレス', '現在在籍・研修中の科でお願いします'], axis=1)
-                     .reset_index()
-                     .rename(columns={'お名前': 'name'})
-                     .melt(id_vars=['name'], 
-                            var_name='date', 
-                            value_name='request', 
-                            ignore_index=False)
-                     )
- 
+            
 # %%
 
-dat_notes = pd.read_excel("rawdata/notes_data.xlsx")
+dat_notes = pd.read_excel("rawdata/2024_06notes_data.xlsx")
 
 # %%
-
+# Todo
 notes_tochoku_data_prep = (dat_notes
-                           .filter(['人', '\u3000日付', '日直・当直'])
                            .rename(columns={"人": "name", 
-                                    "\u3000日付": "date",
+                                    "日付": "date",
                                     "日直・当直": "request"})
                                )
                    
