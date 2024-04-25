@@ -10,6 +10,9 @@ import re
 #%%
 # read excel data
 dat = pd.read_excel("rawdata/2024_06answer.xlsx")
+
+dat_notes = pd.read_excel("rawdata/2024_06notes_data.xlsx")
+
 #%%
 
 comment_dat = (dat.filter(['タイムスタンプ', 'お名前', '日直・当直希望についての備考', '1次救急希望についての備考',
@@ -70,7 +73,7 @@ for i in spplist:
         regex = r'ICU勤務.*\d月\d日'
     data = (dat
              .filter(regex = regex)
-       #       .rename(columns=extract_date)
+             .rename(columns=extract_date)
              )
     prep_data = (pd.concat([base_data, data], axis=1)
                      .assign(タイムスタンプ=lambda x: pd.to_datetime(x['タイムスタンプ']))
@@ -85,67 +88,31 @@ for i in spplist:
                             value_name='request', 
                             ignore_index=False)
                      )
-    tmp.append(prep_data)
-
-            
-# %%
-
-dat_notes = pd.read_excel("rawdata/2024_06notes_data.xlsx")
-
-# %%
-# Todo
-notes_tochoku_data_prep = (dat_notes
-                           .rename(columns={"人": "name", 
-                                    "日付": "date",
-                                    "日直・当直": "request"})
-                               )
-                   
-                                    
-                                    
- #%%                                   
-
-tochoku_data = (pd.concat([tochoku_data_prep, notes_tochoku_data_prep], 
-                         axis = 0)
-                  .applymap(lambda x: x.strip() if isinstance(x, str) else x)   
-                  .assign(request=lambda x: np.where(x['request'] == '', None, x['request']))   
+    if i == 'tochoku':
+        colname = '日直・当直'
+    elif i == 'ichijikyu':
+        colname = '一次救急'
+    elif i == 'ICU':
+        colname = 'ICU勤務'
+    notes_data = (dat_notes
+             .filter(['人', '日付', colname])
+             .rename(columns={"人": "name", 
+                              "日付": "date",
+                              colname: "request"}))
+    combined_data = (pd.concat([prep_data, notes_data], axis=0)
+                    .applymap(lambda x: x.strip() if isinstance(x, str) else x)   
+                    .assign(request=lambda x: np.where(x['request'] == '', None, x['request']))   
                          )
+    data_wide = (combined_data
+             .groupby(['name', 'request'])['date']
+             .apply(lambda x: ' ,'.join(x))
+             .reset_index()
+             .pivot(index='name', columns='request', values='date')    
+    )
+    tmp.append(data_wide)
 
-
-# %%
-
-notes_ichijikyu_data_prep = (dat_notes
-                           .filter(['人', '\u3000日付', '一次救急'])
-                           .rename(columns={"人": "name", 
-                                    "\u3000日付": "date",
-                                    "一次救急": "request"})
-                           .applymap(lambda x: x.strip() if isinstance(x, str) else x)  
-                           .assign( request=lambda x: np.where(x['request'] == '', None, x['request']))   
-                         
-                                    )
-
-
-
-# notes_ichijikyu_data_prep['request'].unique().to_list()
-
-ichijikyu_data = (pd.concat([ichijikyu_data_prep, notes_ichijikyu_data_prep], 
-                         axis=0)
-)
-
-
-ichijikyu_wide = (ichijikyu_data
-       .groupby(['name', 'request'])['date']
-       .apply(lambda x: ' ,'.join(x))
-       .reset_index()
-       .pivot(index='name', columns='request', values='date'))
-
-# %%
-
-tochoku_wide = (tochoku_data
-       .groupby(['name', 'request'])['date']
-       .apply(lambda x: ' ,'.join(x))
-       .reset_index()
-       .pivot(index='name', columns='request', values='date')
-       )
+                                    
+    
 
 # %%
 
