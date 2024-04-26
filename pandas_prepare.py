@@ -51,11 +51,11 @@ tmp = []
 spplist = ['tochoku', 'ichijikyu', 'ICU']
 for i in spplist:
     if i == 'tochoku':
-        regex = r'日直・当直希望.*\d月\d日'
+        regex = r'日直・当直希望.*\d{1,2}月'
     elif i == 'ichijikyu':
-        regex = r'1次救急.*\d月\d日'
+        regex = r'1次救急.*\d{1,2}月'
     elif i == 'ICU':
-        regex = r'ICU勤務.*\d月\d日'
+        regex = r'ICU勤務.*\d{1,2}月'
     data = (dat
              .filter(regex = regex)
              .rename(columns=extract_date)
