@@ -46,7 +46,8 @@ base_data = (dat
              )
 
 #%%
-tmp = []
+wide_list = []
+long_list = []
 
 spplist = ['tochoku', 'ichijikyu', 'ICU']
 for i in spplist:
@@ -136,13 +137,15 @@ for i in spplist:
     #             .assign(ICU勤務希望についての備考=lambda x: x['ICU勤務希望についての備考_x'].combine_first(x['ICU勤務希望についての備考_x']))
     #             .drop(['日直・当直希望についての備考_x', '日直・当直希望についての備考_y', '1次救急希望についての備考_x', '1次救急希望についての備考_y', 'ICU勤務希望についての備考_x', 'ICU勤務希望についての備考_y'], axis = 1)
     #             )
-     
+    
     data_wide2.to_excel(f"{i}_6.xlsx")
+    
+    wide_list.append(data_wide2)
+    long_list.append(combined_data)
 
-    tmp.append(data_wide2)
 
 # %%
 
-pd.concat(tmp).to_excel("tochoku_all_6.xlsx")
+pd.concat(wide_list).to_excel("tochoku_all_6.xlsx")
 
 # %%
