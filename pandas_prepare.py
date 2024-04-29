@@ -6,6 +6,7 @@ import seaborn as sns
 from datetime import date
 import datetime
 import re
+import pickle
 
 #%%
 # read excel data
@@ -148,4 +149,7 @@ for i in spplist:
 
 pd.concat(wide_list).to_excel("tochoku_all_6.xlsx")
 
+# %%
+with open('long_list_6.pkl', 'wb') as f:
+    pickle.dump(long_list, f)
 # %%
