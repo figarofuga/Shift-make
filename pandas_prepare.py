@@ -47,8 +47,8 @@ base_data = (dat
              )
 
 #%%
-wide_list = []
-long_list = []
+wide_dict = {}
+long_dict = {}
 
 spplist = ['tochoku', 'ichijikyu', 'ICU']
 for i in spplist:
@@ -141,15 +141,15 @@ for i in spplist:
     
     data_wide2.to_excel(f"{i}_6.xlsx")
     
-    wide_list.append(data_wide2)
-    long_list.append(combined_data)
+    wide_dict[i] = data_wide2
+    long_dict[i] = combined_data
 
 
 # %%
 
-pd.concat(wide_list).to_excel("tochoku_all_6.xlsx")
+pd.concat(list(wide_dict.values())).to_excel("tochoku_all_6.xlsx")
 
 # %%
-with open('long_list_6.pkl', 'wb') as f:
-    pickle.dump(long_list, f)
+with open('long_dict_6.pkl', 'wb') as f:
+    pickle.dump(long_dict, f)
 # %%
