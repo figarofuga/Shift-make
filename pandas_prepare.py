@@ -151,5 +151,5 @@ pd.concat(list(wide_dict.values())).to_excel("tochoku_all_6.xlsx")
 
 # %%
 with open('long_dict_6.pkl', 'wb') as f:
-    pickle.dump(long_dict, f)
+    pickle.dump(long_dict, f, protocol=pickle.HIGHEST_PROTOCOL)
 # %%
