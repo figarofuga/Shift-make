@@ -94,6 +94,7 @@ for i in spplist:
     combined_data = (pd.concat([prep_data, notes_data], axis=0)
                     .applymap(lambda x: x.strip() if isinstance(x, str) else x)   
                     .assign(request=lambda x: np.where(x['request'] == '', None, x['request']))   
+                    .assign(name = lambda x: x['name'].str.replace('[　 ]', '', regex=True))
                          )
     data_wide = (combined_data
              .groupby(['name', 'request'])['date']
