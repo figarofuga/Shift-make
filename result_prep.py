@@ -79,6 +79,7 @@ prep_dat_5 = (res_dat_5
             .apply(lambda x: ' ,'.join(x))
             .reset_index()
             .assign(name = lambda x: x['name'].str.replace('[　 ]', '', regex=True))
+            .assign(tochoku_date = lambda x: x['2024年5月当直表'].str.extract(r'(\d{1,2}月\d{1,2}日)'))
 )
 prep_dat_6 = (res_dat_6
                      .melt(id_vars = "2024年6月当直表", value_name='name', var_name='tochoku')
@@ -88,6 +89,7 @@ prep_dat_6 = (res_dat_6
                      .apply(lambda x: ' ,'.join(x))
                      .reset_index()
                      .assign(name = lambda x: x['name'].str.replace('[　 ]', '', regex=True))
+                     .assign(tochoku_date = lambda x: x['2024年6月当直表'].str.extract(r'(\d{1,2}月\d{1,2}日)'))
 )
 # %%
 tochoku_request = (request_data_6['tochoku']
@@ -105,8 +107,25 @@ tochoku_request = (request_data_6['tochoku']
 ))
 
 )
-tmp = prep_dat_6.assign(name = lambda x:x['name'].replace(named_list))
+tmp = (
+    prep_dat_6
+    .assign(name = lambda x:x['name'].replace(named_list))
+    .assign(tochoku_date2 = lambda x: pd.to_datetime(x['tochoku_date'], format='%m月%d日'))
+            
+)
 # %%
-pd.merge(tochoku_request, tmp, on='name', how='outer')
+pd.merge(tochoku_request, tmp, on='name', how='right')
+# %%
+# Check interval
+tmp['shift_day'] = (tmp
+            .sort_values(['name', 'tochoku_date2'])
+            .groupby('name')['tochoku_date2']
+            .shift(-1)
+            )
+tmp2 = (tmp
+        .assign(diffday = lambda x: (x['shift_day'] - x['tochoku_date2']).dt.days)
+        .query("diffday < 3")
 
+
+)
 # %%
