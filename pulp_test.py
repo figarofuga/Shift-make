@@ -44,7 +44,7 @@ on_call = LpVariable.dicts("on_call",
 # No duties on forbidden days
 for person in preferences_df['お名前']:
     for date in dates:
-        if date in preferences_data.index and preferences_data.at[date, person] == '不可日':
+        if date in preferences_data.index and preferences_data.loc[date, person] == '不可日':
             for duty in duty_types:
                 problem += on_call[(person, date, duty)] == 0
 
@@ -81,3 +81,4 @@ for person, duties in assigned_duties.items():
     output.append(f"{person}: {', '.join(duties)}")
 
 print("\n".join(output))
+# %%
