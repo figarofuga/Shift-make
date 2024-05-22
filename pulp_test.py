@@ -1,5 +1,6 @@
 #%%
 import pandas as pd
+import re
 from pulp import LpProblem, LpMinimize, LpVariable, lpSum, LpStatus
 
 #%%
@@ -12,12 +13,19 @@ preferences_df = pd.read_excel('当直希望データ.xlsx')
 residents_df = preferences_df[preferences_df['あなたの立場は？'] == 'レジデント']
 staff_df = preferences_df[preferences_df['あなたの立場は？'] == 'スタッフ']
 
+
 # Extract necessary columns for processing
-june_schedule_df['Date'] = pd.to_datetime(june_schedule_df['2024年6月当直表'], format='%m月%d日 (%a)')
+# 曜日部分を削除
+june_schedule_df['Cleaned_Date'] = june_schedule_df['2024年6月当直表'].apply(lambda x: re.sub(r'\([^)]*\)', '', x).strip())
+# 年を追加して日付を解析
+june_schedule_df['Date'] = pd.to_datetime('2024年' + june_schedule_df['Cleaned_Date'], format='%Y年%m月%d日')
 
 # Convert preference data to a suitable format
 preferences_data = preferences_df.set_index('お名前').T.drop(['あなたの立場は？', 'あなたは医師何年目ですか？'])
-preferences_data.index = pd.to_datetime(preferences_data.index, format='%m月%d日(%a)')
+# 曜日部分を削除
+preferences_data.index = preferences_data.index.to_series().apply(lambda x: re.sub(r'\([^)]*\)', '', x))
+# 年を追加して日付を解析
+preferences_data.index = pd.to_datetime('2024年' + preferences_data.index, format='%Y年%m月%d日')
 
 #%%
 # Define the problem
