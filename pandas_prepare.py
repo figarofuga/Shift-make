@@ -7,12 +7,14 @@ from datetime import date
 import datetime
 import re
 import pickle
-
+#%% 
+month = 7
 #%%
 # read excel data
-dat = pd.read_excel("rawdata/2024_06answer.xlsx")
+dat = pd.read_excel(f"rawdata/{month}m/2024_{month}answer.xlsx")
 
-dat_notes = pd.read_excel("rawdata/2024_06notes_data.xlsx")
+dat_notes = pd.read_excel(f"rawdata/{month}m/2024_{month}notes_data.xlsx")
+
 
 #%%
 
@@ -140,7 +142,7 @@ for i in spplist:
     #             .drop(['日直・当直希望についての備考_x', '日直・当直希望についての備考_y', '1次救急希望についての備考_x', '1次救急希望についての備考_y', 'ICU勤務希望についての備考_x', 'ICU勤務希望についての備考_y'], axis = 1)
     #             )
     
-    data_wide2.to_excel(f"{i}_6.xlsx")
+    data_wide2.to_excel(f"prepdata/{month}m/{i}_{month}.xlsx")
     
     wide_dict[i] = data_wide2
     long_dict[i] = combined_data
@@ -148,9 +150,9 @@ for i in spplist:
 
 # %%
 
-pd.concat(list(wide_dict.values())).to_excel("tochoku_all_6.xlsx")
+pd.concat(list(wide_dict.values())).to_excel(f"prepdata/{month}m/tochoku_all_{month}.xlsx")
 
 # %%
-with open('long_dict_6.pkl', 'wb') as f:
+with open(f"prepdata/{month}m/long_dict_{month}.pkl", 'wb') as f:
     pickle.dump(long_dict, f, protocol=pickle.HIGHEST_PROTOCOL)
 # %%
