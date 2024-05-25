@@ -3,9 +3,9 @@ import numpy as np
 import pandas as pd
 import pickle
 import re
-
 #%%
-
+month = 7
+#%%
 named_list = {
  '久冨木原': '久冨木原健二', 
  '伊藤(国)': '伊藤国秋', 
@@ -62,16 +62,16 @@ named_list = {
 
 #%%
 # read excel data
-res_dat_5 = pd.read_excel("rawdata/2024_5_res.xlsx")
-res_dat_6 = pd.read_excel("rawdata/2024_6_res.xlsx")
+res_dat_before = pd.read_excel(f"rawdata/{month-1}m/2024_{month-1}_res.xlsx")
+res_dat_check = pd.read_excel(f"rawdata/{month}m/2024_{month}_res.xlsx")
 
 # read pickle of desired data
-with open('long_dict_6.pkl', 'rb') as handle:
-    request_data_6 = pickle.load(handle)
+with open(f"prepdata/{month}m/long_dict_{month}.pkl", 'rb') as handle:
+    request_data_check = pickle.load(handle)
     
 
 #%%
-prep_dat_5 = (res_dat_5
+prep_dat_before = (res_dat_before
             .melt(id_vars = "2024年5月当直表", value_name='name', var_name='tochoku')
             .dropna()
             .query("tochoku.isin(['D日直', 'E当直', 'F当直', 'A当直', 'B当直', '教育当直', '病棟当直'])")
@@ -81,7 +81,7 @@ prep_dat_5 = (res_dat_5
             .assign(name = lambda x: x['name'].str.replace('[　 ]', '', regex=True))
             .assign(tochoku_date = lambda x: x['2024年5月当直表'].str.extract(r'(\d{1,2}月\d{1,2}日)'))
 )
-prep_dat_6 = (res_dat_6
+prep_dat_check = (res_dat_check
                      .melt(id_vars = "2024年6月当直表", value_name='name', var_name='tochoku')
                      .dropna()
                      .query("tochoku.isin(['D日直', 'E当直', 'F当直', 'A当直', 'B当直', '教育当直', '病棟当直'])")
@@ -92,7 +92,7 @@ prep_dat_6 = (res_dat_6
                      .assign(tochoku_date = lambda x: x['2024年6月当直表'].str.extract(r'(\d{1,2}月\d{1,2}日)'))
 )
 # %%
-tochoku_request = (request_data_6['tochoku']
+tochoku_request = (request_data_check['tochoku']
                    .assign(request2 = lambda x: np.select(
     [
         x['request'].isin(['○１', '○', '◯', '希望日']),
@@ -108,7 +108,7 @@ tochoku_request = (request_data_6['tochoku']
 
 )
 tmp = (
-    prep_dat_6
+    prep_dat_check
     .assign(name = lambda x:x['name'].replace(named_list))
     .assign(tochoku_date2 = lambda x: pd.to_datetime(x['tochoku_date'], format='%m月%d日'))
             
