@@ -13,9 +13,10 @@ month = 7
 # read excel data
 dat = pd.read_excel(f"rawdata/{month}m/2024_{month}answer.xlsx")
 
-dat_notes = pd.read_excel(f"rawdata/{month}m/2024_{month}notes_data.xlsx")
+dat_notes = (pd.read_excel(f"rawdata/{month}m/2024_{month}notes_data.xlsx", header=1)
+             .dropna(how='all', axis=1)
 
-
+)
 #%%
 
 comment_dat = (dat.filter(['タイムスタンプ', 'お名前', '日直・当直希望についての備考', '1次救急希望についての備考',

@@ -1,11 +1,32 @@
 #%%
 import pandas as pd
+import re
 from pulp import LpProblem, LpVariable, lpSum, LpMinimize, LpStatus, value
+
+#%%
+# 列名を変更する関数
+def extract_date(column_name):
+    match = re.search(r'\d+月\d+日', column_name)
+    if match:
+        return match.group()  # 日付部分のみを返す
+    return column_name  # マッチしない場合は元の列名を返す
 
 #%%
 # ファイルを読み込みます
 duty_schedule_df = pd.read_excel('2024年7月当直表_test.xlsx')
-duty_preferences_df = pd.read_excel('2024年7月の日当直・ICU勤務・1次救急希望_test.xlsx', sheet_name='alldata')
+duty_preferences_df_pre = pd.read_excel('2024年7月_res_0527.xlsx')
+
+# "お名前"列でGroupbyしてタイムスタンプで最も最近の行を取得します
+# "お名前", "あなたの立場は？", r'日直・当直希望.*\d{1,2}月'の列のみ選択します
+
+duty_preferences_df = (duty_preferences_df_pre
+                       .assign(タイムスタンプ=lambda x: pd.to_datetime(x['タイムスタンプ']))
+                       .sort_values(by='タイムスタンプ', ascending=True)
+                       .groupby('お名前')
+                       .last()
+                       .reset_index()
+                       .filter(regex=r'お名前|あなたの立場は？|日直・当直希望.*\d{1,2}月')  
+                       .rename(columns=extract_date))
 
 # レジデントとスタッフを分けます
 residents = duty_preferences_df[duty_preferences_df['あなたの立場は？'] == 'レジデント']
@@ -73,16 +94,21 @@ for person in total_duties_per_person:
     prob += total_duties_per_person[person] >= average_duties - 1
 
 #%%
-# 同一人物の当直は少なくとも3日間あける
+# 同一人物の当直は少なくとも3日間あける制約
+# 同一人物が同じ日に複数の当直を持たないようにする制約
 for person in duty_preferences_df['お名前']:
     for row in range(rows):
-        for col in range(1, cols - 3):  # cols - 3 に修正
-            if duty_schedule_df.iloc[row, col] in [1, 2, 3]:
-                prob += lpSum(
-                    duty_vars[(row, col + offset, person)]
-                    for offset in range(4)
-                    if (col + offset) < cols and duty_schedule_df.iloc[row, col + offset] in [1, 2, 3]
-                ) <= 1
+        prob += lpSum(duty_vars[(row, col, person)] for col in range(cols) if duty_schedule_df.iloc[row, col] in [1, 2, 3]) <= 1
+
+# 同一人物の当直は少なくとも3日間あける制約
+for person in duty_preferences_df['お名前']:
+    for row in range(rows - 2):  # -2 to ensure we have enough days to check
+        prob += lpSum(
+            duty_vars[(row + offset, col, person)]
+            for offset in range(3)
+            for col in range(cols)
+            if (row + offset) < rows and duty_schedule_df.iloc[row + offset, col] in [1, 2, 3]
+        ) <= 1
 
 #%%
 # 問題を解きます
@@ -116,4 +142,10 @@ for person in assigned_duties:
 
 for person in output:
     print(f"{person}: {output[person]['duties']}, {output[person]['matching_wishes']}, {output[person]['conflicting_days']}")
+# %%
+# 辞書をDataFrameに変換
+df_output = pd.DataFrame(output)
+
+# CSVファイルに書き出し
+df_output.to_excel('output.xlsx')
 # %%
