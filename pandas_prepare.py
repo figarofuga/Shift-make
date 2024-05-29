@@ -17,6 +17,7 @@ dat_notes = (pd.read_excel(f"rawdata/{month}m/2024_{month}notes_data.xlsx", head
              .dropna(how='all', axis=1)
 
 )
+
 #%%
 
 comment_dat = (dat.filter(['タイムスタンプ', 'お名前', '日直・当直希望についての備考', '1次救急希望についての備考',
@@ -48,6 +49,31 @@ def extract_date(column_name):
 base_data = (dat
              .filter(['タイムスタンプ', 'お名前', 'あなたの専門はなんですか?', 'あなたは医師何年目ですか?'])
              )
+#%%
+
+kibou_df = (dat.filter(regex=r'タイムスタンプ|お名前|日直・当直希望.*\d{1,2}月')
+       .rename(columns=extract_date)
+       .melt(id_vars=['タイムスタンプ', 'お名前'], 
+             var_name='date', value_name='request')
+       .dropna(axis=0, subset=['request'])
+       .query('request=="希望日"')
+       .groupby('date')['お名前']
+       .agg(' ,'.join)
+       .reset_index()
+)
+
+fukabi_df = (dat.filter(regex=r'タイムスタンプ|お名前|日直・当直希望.*\d{1,2}月')
+       .rename(columns=extract_date)
+       .melt(id_vars=['タイムスタンプ', 'お名前'], 
+             var_name='date', value_name='request')
+       .dropna(axis=0, subset=['request'])
+       .query('request=="不可日"')
+       .groupby('date')['お名前']
+       .agg(' ,'.join)
+       .reset_index()
+)
+
+
 
 #%%
 wide_dict = {}
@@ -84,12 +110,14 @@ for i in spplist:
     if i == 'tochoku':
         colname = '日直・当直'
     elif i == 'ichijikyu':
-        colname = '一次救急'
+        colname = '1次救急'
     elif i == 'ICU':
         colname = 'ICU勤務'
 
+    col_regex = f'人|日付|{colname}.*'
+    
     notes_data = (dat_notes
-             .filter(['人', '日付', colname])
+             .filter(regex = col_regex)
              .rename(columns={"人": "name", 
                               "日付": "date",
                               colname: "request"}))
