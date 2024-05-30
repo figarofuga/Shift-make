@@ -19,6 +19,13 @@ prob = pulp.LpProblem('ShiftScheduling', pulp.LpMaximize)
 # 変数の定義
 x = pulp.LpVariable.dicts('shift', ((emp, day) for emp in employees for day in range(7)), cat='Binary')
 
+# 各担当者のシフト回数をカウントする変数
+shift_count = {emp: pulp.lpSum([x[(emp, day)] for day in range(7)]) for emp in employees}
+
+# 最小および最大シフト回数の変数
+min_shifts = pulp.LpVariable('min_shifts', lowBound=0, cat='Integer')
+max_shifts = pulp.LpVariable('max_shifts', lowBound=0, cat='Integer')
+
 # 目的関数
 prob += pulp.lpSum([x[(emp, day)] for emp in employees for day in availability[emp]['希望日']])
 
@@ -45,6 +52,14 @@ for emp in employees:
             prob += (pulp.lpSum([x[(emp, d)] for d in range(day, day + 4)]) <= 1)
         elif day >= 4:
             prob += (pulp.lpSum([x[(emp, d)] for d in range(day - 3, day + 1)]) <= 1)
+
+# 最小および最大シフト回数の制約
+for emp in employees:
+    prob += (shift_count[emp] >= min_shifts)
+    prob += (shift_count[emp] <= max_shifts)
+
+# 最大シフト回数と最小シフト回数の差が2以下
+prob += (max_shifts - min_shifts <= 2)
 
 # 問題を解く
 prob.solve()
