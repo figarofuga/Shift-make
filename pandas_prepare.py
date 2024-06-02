@@ -127,7 +127,7 @@ data_wide_tochoku = (data_wide_tochoku_pre
                  .assign(species = 'tochoku')
     )
 
-comment_tochoku = comment_dat.filter(regex==r'name|日直・当直')
+comment_tochoku = comment_dat.filter(regex=r'name|日直・当直')
 
 data_wide_tochoku_comment = (data_wide_tochoku_pre
                  .merge(comment_tochoku, on='name', how='left')
