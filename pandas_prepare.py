@@ -73,7 +73,65 @@ fukabi_df = (dat.filter(regex=r'タイムスタンプ|お名前|日直・当直�
        .reset_index()
 )
 
+#%%
+# 当直のデータを整形
+data_tochoku = (dat
+        .filter(regex=r'日直・当直希望.*\d{1,2}月')
+        .rename(columns=extract_date)
+)
+data_concat_tochoku = (pd.concat([base_data, data_tochoku], axis=1)
+                       .assign(タイムスタンプ=lambda x: pd.to_datetime(x['タイムスタンプ']))
+                          .sort_values(by='タイムスタンプ', ascending=True)
+                            .groupby('お名前')
+                            .last()
+                            .drop(['タイムスタンプ'], axis=1)
+                            .reset_index()
+                            .rename(columns={'お名前': 'name'})
+                            .melt(id_vars=['name'], 
+                                  var_name='date', 
+                                  value_name='request', 
+                                  ignore_index=False)
+)
+# notes dataと結合
 
+notes_data_tochoku = (dat_notes
+                .filter(regex=r'人|日付|日直・当直.*')
+                .rename(columns={"人": "name", 
+                                 "日付": "date",
+                                 "日直・当直": "request"}))
+combined_data_tochoku = (pd.concat([data_concat_tochoku, notes_data_tochoku], axis=0)
+                            .applymap(lambda x: x.strip() if isinstance(x, str) else x)   
+                            .assign(request=lambda x: np.where(x['request'] == '', None, x['request']))   
+                            .assign(name = lambda x: x['name'].str.replace('[　 ]', '', regex=True))
+                            )
+
+data_wide_tochoku_pre = (combined_data_tochoku
+             .groupby(['name', 'request'])['date']
+             .apply(lambda x: ' ,'.join(x))
+             .reset_index()
+             .pivot(index='name', columns='request', values='date')    
+    )
+columns_ok = data_wide_tochoku_pre.filter(items = ['○', '◯', '希望日']).columns
+if not columns_ok.empty:
+    # 該当する列のデータをコンマ区切りで結合
+    data_wide_tochoku_pre['accept'] = data_wide_tochoku_pre[columns_ok].apply(lambda x: ', '.join(x.dropna().astype(str)), axis=1)
+    
+columns_bad = data_wide_tochoku_pre.filter(items=['×', '✕', '不可日']).columns
+if not columns_bad.empty:
+    # 該当する列のデータをコンマ区切りで結合
+    data_wide_tochoku_pre['reject'] = data_wide_tochoku_pre[columns_bad].apply(lambda x: ', '.join(x.dropna().astype(str)), axis=1)
+
+data_wide_tochoku = (data_wide_tochoku_pre
+                 .drop(columns=columns_ok)
+                 .drop(columns=columns_bad)
+                 .assign(species = 'tochoku')
+    )
+
+comment_tochoku = comment_dat.filter(regex==r'name|日直・当直')
+
+data_wide_tochoku_comment = (data_wide_tochoku_pre
+                 .merge(comment_tochoku, on='name', how='left')
+            )
 
 #%%
 wide_dict = {}
