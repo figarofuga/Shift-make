@@ -98,7 +98,7 @@ notes_data_tochoku = (dat_notes
                 .filter(regex=r'人|日付|日直・当直.*')
                 .rename(columns=lambda x: 'name' if '人' in x else x)
                 .rename(columns=lambda x: 'date' if '日付' in x else x)
-                .rename(columns=lambda x: 'request' if '日直・当直希望' and not '備考' in x else x)
+                .rename(columns=lambda x: 'request' if '日直・当直希望' in x and '備考' not in x else x)
 )
 
 combined_data_tochoku = (pd.concat([data_concat_tochoku, notes_data_tochoku], axis=0)
@@ -111,9 +111,10 @@ data_wide_tochoku_pre = (combined_data_tochoku
              .groupby(['name', 'request'])['date']
              .apply(lambda x: ' ,'.join(x))
              .reset_index()
-             .pivot(index='name', columns='request', values='date')    
+             .pivot(index='name', columns='request', values='date')
+             .reset_index()
     )
-columns_ok = data_wide_tochoku_pre.filter(items = ['○', '◯', '希望日']).columns
+columns_ok = data_wide_tochoku_pre.filter(items = ['○', '◯','〇', '◯１','希望日']).columns
 if not columns_ok.empty:
     # 該当する列のデータをコンマ区切りで結合
     data_wide_tochoku_pre['accept'] = data_wide_tochoku_pre[columns_ok].apply(lambda x: ', '.join(x.dropna().astype(str)), axis=1)
@@ -131,8 +132,9 @@ data_wide_tochoku = (data_wide_tochoku_pre
 
 comment_tochoku = comment_dat.filter(regex=r'name|日直・当直')
 
-data_wide_tochoku_comment = (data_wide_tochoku_pre
+data_wide_tochoku_comment = (data_wide_tochoku
                  .merge(comment_tochoku, on='name', how='left')
+                 .assign(comment = lambda df: df['日直・当直希望'].combine_first(df['日直・当直希望についての備考']))
             )
 
 #%%
@@ -160,7 +162,7 @@ notes_data_icu = (dat_notes
                 .filter(regex=r'人|日付|ICU.*')
                 .rename(columns=lambda x: 'name' if '人' in x else x)
                 .rename(columns=lambda x: 'date' if '日付' in x else x)
-                .rename(columns=lambda x: 'request' if 'ICU' and not '備考' in x else x)
+                .rename(columns=lambda x: 'request' if 'ICU' in x and '備考' not in x else x)
 )
 
 combined_data_icu = (pd.concat([data_concat_icu, notes_data_icu], axis=0)
@@ -221,7 +223,7 @@ notes_data_ichijikyu = (dat_notes
                 .filter(regex=r'人|日付|1次救急.*')
                 .rename(columns=lambda x: 'name' if '人' in x else x)
                 .rename(columns=lambda x: 'date' if '日付' in x else x)
-                .rename(columns=lambda x: 'request' if '1次救急' and not '備考' in x else x)
+                .rename(columns=lambda x: 'request' if '1次救急' in x and '備考' not in x else x)
 )
 combined_data_ichijikyu = (pd.concat([data_concat_ichijikyu, notes_data_ichijikyu], axis=0)
                             .applymap(lambda x: x.strip() if isinstance(x, str) else x)   
