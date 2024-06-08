@@ -42,17 +42,17 @@ prob += max_shifts - min_shifts
 for day in range(7):
     if day < 5:  # 平日
         prob += (pulp.lpSum([x[(emp, day)] for emp in employees]) == 3)
-        # prob += (pulp.lpSum([x[(emp, day)] for emp in full_timers]) >= 1)
-        # prob += (pulp.lpSum([x[(emp, day)] for emp in part_timers]) >= 1)
+        prob += (pulp.lpSum([x[(emp, day)] for emp in full_timers]) >= 1)
+        prob += (pulp.lpSum([x[(emp, day)] for emp in part_timers]) >= 1)
     else:  # 土日
         prob += (pulp.lpSum([x[(emp, day)] for emp in employees]) == 4)
-        # prob += (pulp.lpSum([x[(emp, day)] for emp in full_timers]) >= 1)
-        # prob += (pulp.lpSum([x[(emp, day)] for emp in part_timers]) >= 2)
+        prob += (pulp.lpSum([x[(emp, day)] for emp in full_timers]) >= 1)
+        prob += (pulp.lpSum([x[(emp, day)] for emp in part_timers]) >= 2)
 
 # 不可日の制約
-# for emp in employees:
-#     for day in availability[emp]['不可日']:
-#         prob += (x[(emp, day)] == 0)
+for emp in employees:
+    for day in availability[emp]['不可日']:
+        prob += (x[(emp, day)] == 0)
 
 # 担当者の間隔制約
 # for emp in employees:
