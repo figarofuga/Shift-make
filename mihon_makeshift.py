@@ -1,7 +1,26 @@
 #%%
+import re
+import pandas as pd
+#%%
+month = 7
+# read excel data
+dat = pd.read_excel(f"rawdata/{month}m/2024_{month}answer.xlsx")
+#%%
+# 当直のデータを整形
+dat_tochoku = (dat
+        .filter(regex=r'名前|立場|日直・当直希望.*\d{1,2}月')
+)
+#%%
+(dat_tochoku
+ .assign(name = lambda x: x['お名前'].str.replace('[　 ]', '', regex=True))
+ .filter(items='name')
+ .drop_duplicates()
+ .values.flatten().tolist()
+)
+#%%
 import pulp
 import random
-
+#%%
 # 担当者リスト
 employees = ['社員1', '社員2', '社員3', '社員4', '社員5', '社員6',
              'アルバイト1', 'アルバイト2', 'アルバイト3', 'アルバイト4', 'アルバイト5', 'アルバイト6']
