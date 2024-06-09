@@ -8,15 +8,39 @@ dat = pd.read_excel(f"rawdata/{month}m/2024_{month}answer.xlsx")
 #%%
 # 当直のデータを整形
 dat_tochoku = (dat
-        .filter(regex=r'名前|立場|日直・当直希望.*\d{1,2}月')
+        .filter(regex=r'名前|タイムスタンプ|立場|日直・当直希望.*\d{1,2}月')
+        .assign(タイムスタンプ=lambda x: pd.to_datetime(x['タイムスタンプ']))
+                     .sort_values(by='タイムスタンプ', ascending=True)
+                     .groupby('お名前')
+                     .last()
+                     .drop(['タイムスタンプ'], axis=1)
+                     .reset_index()
+                     .rename(columns={'お名前': 'name', 
+                                      'あなたの立場は？': 'position'})
+                     .assign(new_name = lambda x: x['name'].str.replace('[　 ]', '', regex=True))
 )
+
 #%%
-(dat_tochoku
- .assign(name = lambda x: x['お名前'].str.replace('[　 ]', '', regex=True))
- .filter(items='name')
+employees=(dat_tochoku
+ .filter(items=['new_name'])
  .drop_duplicates()
  .values.flatten().tolist()
 )
+
+staffs = (dat_tochoku
+          .query('position == "スタッフ"')
+          .filter(items=['new_name'])
+          .drop_duplicates()
+          .values.flatten().tolist()
+)
+
+residents = (dat_tochoku
+            .query('position == "レジデント"')
+            .filter(items=['new_name'])
+            .drop_duplicates()
+            .values.flatten().tolist()
+    )
+
 #%%
 import pulp
 import random
