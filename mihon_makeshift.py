@@ -3,22 +3,52 @@ import re
 import pandas as pd
 #%%
 month = 7
+
 # read excel data
 dat = pd.read_excel(f"rawdata/{month}m/2024_{month}answer.xlsx")
 #%%
+def extract_date(column_name):
+    match = re.search(r'\d+月\d+日', column_name)
+    if match:
+        return match.group()  # 日付部分のみを返す
+    return column_name  # マッチしない場合は元の列名を返す
+
 # 当直のデータを整形
 dat_tochoku = (dat
         .filter(regex=r'名前|タイムスタンプ|立場|日直・当直希望.*\d{1,2}月')
         .assign(タイムスタンプ=lambda x: pd.to_datetime(x['タイムスタンプ']))
-                     .sort_values(by='タイムスタンプ', ascending=True)
-                     .groupby('お名前')
-                     .last()
-                     .drop(['タイムスタンプ'], axis=1)
-                     .reset_index()
-                     .rename(columns={'お名前': 'name', 
-                                      'あなたの立場は？': 'position'})
-                     .assign(new_name = lambda x: x['name'].str.replace('[　 ]', '', regex=True))
+        .sort_values(by='タイムスタンプ', ascending=True)
+        .groupby('お名前')
+        .last()
+        .drop(['タイムスタンプ'], axis=1)
+        .reset_index()
+        .rename(columns={'お名前': 'name', 
+                         'あなたの立場は？': 'position'})
+        .assign(name = lambda x: x['name'].str.replace('[　 ]', '', regex=True))
+        .rename(columns=lambda x: extract_date(x))
 )
+#%% 
+# 各人の名前ごとに希望日と不可日のデータを整形
+# ｛"川瀬咲": {"希望日": [1, 2, 3], "不可日": [4, 5, 6]}｝のようにする
+# 必要なデータを抽出して辞書に整形する関数
+def create_availability_dict(df):
+    result = {}
+    date_pattern = re.compile(r"7月\d+日")
+    for index, row in df.iterrows():
+        name = row["name"]
+        availability = {"希望日": [], "不可日": []}
+        for col in df.columns:
+            if date_pattern.match(col):
+                day = int(col.replace("7月", "").replace("日", ""))
+                if row[col] == "希望日":
+                    availability["希望日"].append(day)
+                elif row[col] == "不可日":
+                    availability["不可日"].append(day)
+        result[name] = availability
+    return result
+# 辞書データの作成
+availability_dict = create_availability_dict(dat_tochoku)
+
 
 #%%
 employees=(dat_tochoku
@@ -132,3 +162,5 @@ for emp in employees:
 print("\n各担当者のシフト回数:")
 for emp in employees:
     print(f'{emp}: {pulp.value(shift_count[emp])}回')
+
+# %%
