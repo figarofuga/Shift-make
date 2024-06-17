@@ -44,11 +44,15 @@ def create_availability_dict(df):
                     availability["希望日"].append(day)
                 elif row[col] == "不可日":
                     availability["不可日"].append(day)
+        # 各値を-1する
+        availability["希望日"] = [day - 1 for day in availability["希望日"]]
+        availability["不可日"] = [day - 1 for day in availability["不可日"]]
         result[name] = availability
     return result
+
+
 # 辞書データの作成
 availability_dict = create_availability_dict(dat_tochoku)
-
 
 #%%
 all_members = (dat_tochoku
@@ -128,20 +132,22 @@ for day in range(days_in_month):
         prob += (pulp.lpSum([x[(emp, day)] for emp in staffs]) >= 1)
         prob += (pulp.lpSum([x[(emp, day)] for emp in residents]) >= 2)
 
+#%%
 # 不可日の制約
 for emp in all_members:
     for day in availability_dict[emp]['不可日']:
         prob += (x[(emp, day)] == 0)
 
 # 担当者の間隔制約
-# for emp in all_members:
-#     for day in range(7):
-#         if day < 3:
-#             prob += pulp.lpSum(x[(emp, d)] for d in range(0, day+4)) <= 1
-#         elif day > 3:
-#             prob += pulp.lpSum(x[(emp, d)] for d in range(day-3, min(7, day+4))) <= 1
-#         else:
-#             prob += pulp.lpSum(x[(emp, d)] for d in range(day-3, 7)) <= 1
+# Todo ここを直す
+for emp in all_members:
+    for day in range(days_in_month):
+        if day < 4:
+            prob += pulp.lpSum(x[(emp, d)] for d in range(0, day+5)) <= 1
+        elif day > 4:
+            prob += pulp.lpSum(x[(emp, d)] for d in range(day-4, min(7, day+5))) <= 1
+        else:
+            prob += pulp.lpSum(x[(emp, d)] for d in range(day-4, 7)) <= 1
 
 # 最小および最大シフト回数の制約
 for emp in all_members:
@@ -154,6 +160,7 @@ prob += (max_shifts - min_shifts <= 2)
 # 問題を解く
 prob.solve()
 
+#%%
 # 結果の表示
 for day in range(days_in_month):
     assigned = [emp for emp in all_members if pulp.value(x[(emp, day)]) == 1]
@@ -162,7 +169,7 @@ for day in range(days_in_month):
 # 希望日と不可日を表示
 print("\n希望日と不可日:")
 for emp in all_members:
-    print(f'{emp} - 希望日: {availability[emp]["希望日"]}, 不可日: {availability[emp]["不可日"]}')
+    print(f'{emp} - 希望日: {availability_dict[emp]["希望日"]}, 不可日: {availability_dict[emp]["不可日"]}')
 
 # 各担当者のシフト回数の表示
 print("\n各担当者のシフト回数:")
