@@ -4,6 +4,12 @@ import pandas as pd
 #%%
 month = 7
 
+#%%
+# "安富大祐","福島龍貴","里見良輔","鈴木勝也","小西美沙子","山田康博","藤村慶子","渡邉多代","清水隆之","長谷川華子",
+total_members = [
+    "大重達寛","佐川偲","林智史","野上創生","脇坂悠介","鈴木徹志郎","久冨木原健二","荒金直美","平井智大","伊藤国秋","東條誠也","津山頌章","吉村梨沙","勝俣敬寛","平井智大","織部峻太郎","川瀬咲","茅島敦人","青木康浩","深沢夏海","佐久川佳怜","小宮健太郎","谷岡友則","先崎光","黒崎颯","篠﨑太郎","莇舜平","雪野満","松原龍輔","髙木菜々美","吉田博道"
+]
+
 # read excel data
 dat = pd.read_excel(f"rawdata/{month}m/2024_{month}answer.xlsx")
 #%%
@@ -157,10 +163,10 @@ for emp in all_members:
 # 最大シフト回数と最小シフト回数の差が2以下
 prob += (max_shifts - min_shifts <= 2)
 
+#%%
 # 問題を解く
 prob.solve()
 
-#%%
 # 結果の表示
 for day in range(days_in_month):
     assigned = [emp for emp in all_members if pulp.value(x[(emp, day)]) == 1]
