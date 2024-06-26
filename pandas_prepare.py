@@ -171,7 +171,7 @@ data_wide_icu = (data_wide_icu_pre
 
 comment_icu = comment_dat.filter(regex=r'name|ICU勤務')
 
-data_wide_icu_comment = (data_wide_icu_pre
+data_wide_icu_comment = (data_wide_icu
                  .merge(comment_icu, on='name', how='left')
             )
 #%%
@@ -226,7 +226,7 @@ data_wide_ichijikyu = (data_wide_ichijikyu_pre
 
 comment_ichijikyu = comment_dat.filter(regex=r'name|1次救急')
 
-data_wide_ichijikyu_comment = (data_wide_ichijikyu_pre
+data_wide_ichijikyu_comment = (data_wide_ichijikyu
                  .merge(comment_ichijikyu, on='name', how='left')
             )
 
