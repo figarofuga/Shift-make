@@ -61,6 +61,10 @@ kiboubi_df = (dat.filter(regex=r'タイムスタンプ|name|日直・当直希�
        .groupby('date')['name']
        .agg(' ,'.join)
        .reset_index()
+       .assign(date = lambda x: pd.to_datetime('2024年' + x['date'], format='%Y年%m月%d日'))
+       .sort_values(by='date', ascending=True)
+       .reset_index(drop=True)
+
 )
 
 fukabi_df = (dat.filter(regex=r'タイムスタンプ|name|日直・当直希望.*\d{1,2}月')
@@ -72,7 +76,11 @@ fukabi_df = (dat.filter(regex=r'タイムスタンプ|name|日直・当直希望
        .groupby('date')['name']
        .agg(' ,'.join)
        .reset_index()
+       .assign(date = lambda x: pd.to_datetime('2024年' + x['date'], format='%Y年%m月%d日'))
+       .sort_values(by='date', ascending=True)
+       .reset_index(drop=True)
 )
+
 #%%
 # C日直のデータを整形
 data_c = (dat
