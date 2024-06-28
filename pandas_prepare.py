@@ -28,7 +28,7 @@ dat = (dat_proto
 #%%
 
 comment_dat = (dat.filter(['タイムスタンプ', 'name', '日直・当直希望についての備考', '1次救急希望についての備考',
-       'ICU勤務希望についての備考', 'このアンケート対する意見があればお願いします。'])
+       'ICU勤務希望についての備考', 'このアンケート対する意見があればお願いします。', 'doctoryear'])
        .assign(タイムスタンプ=lambda x: pd.to_datetime(x['タイムスタンプ']))
                      .sort_values(by='タイムスタンプ', ascending=True)
                      .groupby('name')
@@ -181,10 +181,12 @@ data_wide_tochoku = (data_wide_tochoku_pre
                  .assign(species = 'tochoku')
     )
 
-comment_tochoku = comment_dat.filter(regex=r'name|日直・当直')
+comment_tochoku = comment_dat.filter(regex=r'name|日直・当直|doctoryear')
 
 data_wide_tochoku_comment = (data_wide_tochoku
                  .merge(comment_tochoku, on='name', how='left')
+                 .sort_values(by='doctoryear', ascending=True)
+                 .drop(columns=['doctoryear'])
             )
 
 #%%
@@ -235,10 +237,12 @@ data_wide_icu = (data_wide_icu_pre
                  .assign(species = 'icu')
     )
 
-comment_icu = comment_dat.filter(regex=r'name|ICU勤務')
+comment_icu = comment_dat.filter(regex=r'name|ICU勤務|doctoryear')
 
 data_wide_icu_comment = (data_wide_icu
                  .merge(comment_icu, on='name', how='left')
+                 .sort_values(by='doctoryear', ascending=True)
+                 .drop(columns=['doctoryear'])
             )
 #%%
 # 1次救急のデータを整形
@@ -289,10 +293,12 @@ data_wide_ichijikyu = (data_wide_ichijikyu_pre
                  .assign(species = 'ichijikyu')
     )
 
-comment_ichijikyu = comment_dat.filter(regex=r'name|1次救急')
+comment_ichijikyu = comment_dat.filter(regex=r'name|1次救急|doctoryear')
 
 data_wide_ichijikyu_comment = (data_wide_ichijikyu
                  .merge(comment_ichijikyu, on='name', how='left')
+                 .sort_values(by='doctoryear', ascending=True)
+                 .drop(columns=['doctoryear'])
             )
 
 # %%
