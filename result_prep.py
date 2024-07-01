@@ -4,7 +4,7 @@ import pandas as pd
 import pickle
 import re
 #%%
-month = 7
+month = 8
 #%%
 named_list = {
  '久冨木原': '久冨木原健二', 
@@ -72,25 +72,29 @@ with open(f"prepdata/{month}m/long_dict_{month}.pkl", 'rb') as handle:
 
 #%%
 prep_dat_before = (res_dat_before
-            .melt(id_vars = "2024年5月当直表", value_name='name', var_name='tochoku')
+            .melt(id_vars = f'2024年{month-1}月当直表', value_name='name', var_name='tochoku')
             .dropna()
             .query("tochoku.isin(['D日直', 'E当直', 'F当直', 'A当直', 'B当直', '教育当直', '病棟当直'])")
-            .groupby(["name", "tochoku"])["2024年5月当直表"]
+            .groupby(["name", "tochoku"])[ f'2024年{month-1}月当直表']
             .apply(lambda x: ' ,'.join(x))
             .reset_index()
             .assign(name = lambda x: x['name'].str.replace('[　 ]', '', regex=True))
-            .assign(tochoku_date = lambda x: x['2024年5月当直表'].str.extract(r'(\d{1,2}月\d{1,2}日)'))
+            .assign(tochoku_date = lambda x: x[ f'2024年{month-1}月当直表'].str.extract(r'(\d{1,2}月\d{1,2}日)'))
 )
+
+
 prep_dat_check = (res_dat_check
-                     .melt(id_vars = "2024年6月当直表", value_name='name', var_name='tochoku')
+                     .melt(id_vars = f'2024年{month}月当直表', value_name='name', var_name='tochoku')
                      .dropna()
-                     .query("tochoku.isin(['D日直', 'E当直', 'F当直', 'A当直', 'B当直', '教育当直', '病棟当直'])")
-                     .groupby(["name", "tochoku"])["2024年6月当直表"]
+                     .query("tochoku.isin(['D日直', 'E当直', 'F当直', '内科1(旧教育/B)', '内科2(旧病棟/A)'])")
+                     .groupby(["name", "tochoku"])[f'2024年{month}月当直表']
                      .apply(lambda x: ' ,'.join(x))
                      .reset_index()
                      .assign(name = lambda x: x['name'].str.replace('[　 ]', '', regex=True))
-                     .assign(tochoku_date = lambda x: x['2024年6月当直表'].str.extract(r'(\d{1,2}月\d{1,2}日)'))
+                     .assign(tochoku_date = lambda x: x[f'2024年{month}月当直表'].str.extract(r'(\d{1,2}月\d{1,2}日)'))
 )
+
+
 # %%
 tochoku_request = (request_data_check['tochoku']
                    .assign(request2 = lambda x: np.select(
@@ -124,7 +128,7 @@ tmp['shift_day'] = (tmp
             )
 tmp2 = (tmp
         .assign(diffday = lambda x: (x['shift_day'] - x['tochoku_date2']).dt.days)
-        .query("diffday < 3")
+        # .query("diffday < 3")
 
 
 )
