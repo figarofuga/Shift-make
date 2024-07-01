@@ -3,6 +3,8 @@ import numpy as np
 import pandas as pd
 import pickle
 import re
+
+import regex
 #%%
 month = 8
 #%%
@@ -22,6 +24,7 @@ named_list = {
  '太良': '太良史郎', 
  '小宮': '小宮健太郎', 
  '小林(洋)': '小林洋太', 
+ '星': '星貴文', 
  '山田': '山田康博', 
  '岡村': '岡村真伊', 
  '岩崎': '岩崎文美',
@@ -35,7 +38,7 @@ named_list = {
  '松永': '松永崇宏', 
  '林(智)': '林智史', 
  '津山': '津山頌章', 
- '福原': '消化器内科福原誠一郎',
+ '福原': '福原誠一郎',
  '深沢': '深沢夏海', 
  '熊木': '熊木聡美',
  '石井': '石井真央', 
@@ -57,7 +60,9 @@ named_list = {
  '青木': '青木康浩', 
  '高木': '髙木菜々美', 
  '高梨': '髙梨航輔', 
- '黒崎': '黒崎颯' }
+ '黒崎': '黒崎颯' 
+ 
+ }
 
 
 #%%
@@ -72,6 +77,7 @@ with open(f"prepdata/{month}m/long_dict_{month}.pkl", 'rb') as handle:
 
 #%%
 prep_dat_before = (res_dat_before
+            .assign(ICU勤務 = lambda x: x['ICU勤務'].str.replace(r'^(AM|PM): ', '', regex=True))
             .melt(id_vars = f'2024年{month-1}月当直表', value_name='name', var_name='tochoku')
             .dropna()
             .query("tochoku.isin(['D日直', 'E当直', 'F当直', 'A当直', 'B当直', '教育当直', '病棟当直'])")
@@ -84,9 +90,10 @@ prep_dat_before = (res_dat_before
 
 
 prep_dat_check = (res_dat_check
+                     .assign(ICU勤務 = lambda x: x['ICU勤務'].str.replace(r'^(AM|PM): ', '', regex=True))
                      .melt(id_vars = f'2024年{month}月当直表', value_name='name', var_name='tochoku')
                      .dropna()
-                     .query("tochoku.isin(['D日直', 'E当直', 'F当直', '内科1(旧教育/B)', '内科2(旧病棟/A)'])")
+                     .query("tochoku.isin(['D日直', 'E当直', 'F当直', '内科1(旧教育/B)', '内科2(旧病棟/A)', 'ICU勤務'])")
                      .groupby(["name", "tochoku"])[f'2024年{month}月当直表']
                      .apply(lambda x: ' ,'.join(x))
                      .reset_index()
@@ -114,22 +121,10 @@ tochoku_request = (request_data_check['tochoku']
 tmp = (
     prep_dat_check
     .assign(name = lambda x:x['name'].replace(named_list))
-    .assign(tochoku_date2 = lambda x: pd.to_datetime(x['tochoku_date'], format='%m月%d日'))
-            
+    .assign(tochoku_date2 = lambda x: pd.to_datetime('2024年' + x['tochoku_date'], format='%Y年%m月%d日'))
+    .assign(shift_day = lambda dat: dat.sort_values(['name', 'tochoku_date2']).groupby('name')['tochoku_date2'].shift(-1))        
+    .assign(diffday = lambda x: (x['shift_day'] - x['tochoku_date2']).dt.days)    
 )
-# %%
-pd.merge(tochoku_request, tmp, on='name', how='right')
-# %%
-# Check interval
-tmp['shift_day'] = (tmp
-            .sort_values(['name', 'tochoku_date2'])
-            .groupby('name')['tochoku_date2']
-            .shift(-1)
-            )
-tmp2 = (tmp
-        .assign(diffday = lambda x: (x['shift_day'] - x['tochoku_date2']).dt.days)
-        # .query("diffday < 3")
 
-
-)
 # %%
+check_request_dt = pd.merge(tochoku_request, tmp, on='name', how='right')
