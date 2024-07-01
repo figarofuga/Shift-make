@@ -5,6 +5,9 @@ import pandas as pd
 import datetime
 import re
 import pickle
+import openpyxl
+from openpyxl.utils.dataframe import dataframe_to_rows
+from openpyxl.styles import Alignment
 #%% 
 month = 8
 ok_sign = r'◯|〇|◯１|希望日'
@@ -323,11 +326,109 @@ data_wide_ichijikyu_comment = (data_wide_ichijikyu
 kiboubi_df.to_excel(f"prepdata/{month}m/kiboubi_{month}.xlsx")
 fukabi_df.to_excel(f"prepdata/{month}m/fukabi_{month}.xlsx")
 
-data_wide_tochoku_comment.to_excel(f"prepdata/{month}m/tochoku_comment_{month}.xlsx")
+#%%
+# Excelファイルへのエクスポート
+tochoku_file_path = f'prepdata/{month}m/tochoku_comment_{month}.xlsx'
 
-data_wide_icu_comment.to_excel(f"prepdata/{month}m/icu_comment_{month}.xlsx")
+with pd.ExcelWriter(tochoku_file_path, engine='openpyxl') as writer:
+    data_wide_tochoku_comment.to_excel(writer, index=False, sheet_name='Sheet1')
+    workbook = writer.book
+    worksheet = writer.sheets['Sheet1']
+    
+    # 列の幅を設定（2番目と3番目の列を390ピクセルに）
+    worksheet.column_dimensions['B'].width = 50.86  # Excelの幅は約1/4ピクセル
+    worksheet.column_dimensions['C'].width = 50.86
+    worksheet.column_dimensions['E'].width = 50.86
+    
+    # テキストの折り返しと縦方向の自動調整
+    for row in worksheet.iter_rows(min_row=2, max_row=worksheet.max_row, min_col=2, max_col=3):
+        for cell in row:
+            cell.alignment = Alignment(wrap_text=True, vertical='top')
 
-data_wide_ichijikyu_comment.to_excel(f"prepdata/{month}m/ichijikyu_comment_{month}.xlsx")
+    # 行の高さを自動調整
+    def adjust_row_height(ws):
+        for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=2, max_col=3):
+            max_height = 15  # デフォルトの高さ
+            for cell in row:
+                if cell.value:
+                    lines = cell.value.count('\n') + 1
+                    # セル内の改行と列幅に基づいて行の高さを設定
+                    # 大まかな計算では、列の幅ごとに行の高さを設定
+                    lines += len(cell.value) // 50.86 + 1 # 列の幅に基づいて行数を計算
+                    max_height = max(max_height, lines * 15)  # 1行あたり約15ピクセルで計算
+            ws.row_dimensions[row[0].row].height = max_height
+
+    adjust_row_height(worksheet)
+
+
+#%%
+# Excelファイルへのエクスポート
+icu_file_path = f'prepdata/{month}m/icu_comment_{month}.xlsx'
+
+with pd.ExcelWriter(icu_file_path, engine='openpyxl') as writer:
+    data_wide_icu_comment.to_excel(writer, index=False, sheet_name='Sheet1')
+    workbook = writer.book
+    worksheet = writer.sheets['Sheet1']
+    
+    # 列の幅を設定（2番目と3番目の列を390ピクセルに）
+    worksheet.column_dimensions['B'].width = 50.86  # Excelの幅は約1/4ピクセル
+    worksheet.column_dimensions['C'].width = 50.86
+    worksheet.column_dimensions['E'].width = 50.86
+    
+    # テキストの折り返しと縦方向の自動調整
+    for row in worksheet.iter_rows(min_row=2, max_row=worksheet.max_row, min_col=2, max_col=3):
+        for cell in row:
+            cell.alignment = Alignment(wrap_text=True, vertical='top')
+
+    # 行の高さを自動調整
+    def adjust_row_height(ws):
+        for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=2, max_col=3):
+            max_height = 15  # デフォルトの高さ
+            for cell in row:
+                if cell.value:
+                    lines = cell.value.count('\n') + 1
+                    # セル内の改行と列幅に基づいて行の高さを設定
+                    # 大まかな計算では、列の幅ごとに行の高さを設定
+                    lines += len(cell.value) // 50.86 + 1 # 列の幅に基づいて行数を計算
+                    max_height = max(max_height, lines * 15)  # 1行あたり約15ピクセルで計算
+            ws.row_dimensions[row[0].row].height = max_height
+
+    adjust_row_height(worksheet)
+
+#%%
+# Excelファイルへのエクスポート
+ichijikyu_file_path = f'prepdata/{month}m/ichijikyu_comment_{month}.xlsx'
+
+with pd.ExcelWriter(ichijikyu_file_path, engine='openpyxl') as writer:
+    data_wide_ichijikyu_comment.to_excel(writer, index=False, sheet_name='Sheet1')
+    workbook = writer.book
+    worksheet = writer.sheets['Sheet1']
+    
+    # 列の幅を設定（2番目と3番目の列を390ピクセルに）
+    worksheet.column_dimensions['B'].width = 50.86  # Excelの幅は約1/4ピクセル
+    worksheet.column_dimensions['C'].width = 50.86
+    worksheet.column_dimensions['E'].width = 50.86
+    
+    # テキストの折り返しと縦方向の自動調整
+    for row in worksheet.iter_rows(min_row=2, max_row=worksheet.max_row, min_col=2, max_col=3):
+        for cell in row:
+            cell.alignment = Alignment(wrap_text=True, vertical='top')
+
+    # 行の高さを自動調整
+    def adjust_row_height(ws):
+        for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=2, max_col=3):
+            max_height = 15  # デフォルトの高さ
+            for cell in row:
+                if cell.value:
+                    lines = cell.value.count('\n') + 1
+                    # セル内の改行と列幅に基づいて行の高さを設定
+                    # 大まかな計算では、列の幅ごとに行の高さを設定
+                    lines += len(cell.value) // 50.86 + 1 # 列の幅に基づいて行数を計算
+                    max_height = max(max_height, lines * 15)  # 1行あたり約15ピクセルで計算
+            ws.row_dimensions[row[0].row].height = max_height
+
+    adjust_row_height(worksheet)
+
 
 # %%
 long_dict = {
