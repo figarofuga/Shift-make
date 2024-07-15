@@ -45,7 +45,7 @@ dat_tochoku = (dat
 #                   "熊木聡美","織部峻太郎","臼坂優希","深沢夏海","松原龍輔","佐久川佳怜","吉田博道","佐久間一也","野上創生","髙木菜々美","谷岡友則","細川善弘","小宮健太郎","高梨航輔","福井梓穂","石井真央","岩崎文美","岡村真伊","黒崎颯","鈴木徹志郎","吉村梨沙","先﨑光","星貴文"
 # ]
 answered = dat_tochoku['name'].values.tolist()
-no_asnwer = ["東絛誠也"]
+no_asnwered = ["東絛誠也"]
 
 #%%
 # 各人の名前ごとに希望日と不可日のデータを整形
@@ -53,13 +53,13 @@ no_asnwer = ["東絛誠也"]
 # 必要なデータを抽出して辞書に整形する関数
 def create_availability_dict(df):
     result = {}
-    date_pattern = re.compile(r"7月\d+日")
+    date_pattern = re.compile(fr"{month}月\d+日")
     for index, row in df.iterrows():
         name = row["name"]
         availability = {"希望日": [], "不可日": []}
         for col in df.columns:
             if date_pattern.match(col):
-                day = int(col.replace("7月", "").replace("日", ""))
+                day = int(col.replace(f"{month}月", "").replace("日", ""))
                 if row[col] == "希望日":
                     availability["希望日"].append(day)
                 elif row[col] == "不可日":
@@ -74,12 +74,11 @@ def create_availability_dict(df):
 # 辞書データの作成
 availability_dict = create_availability_dict(dat_tochoku)
 
+for name in no_asnwered:
+    availability_dict[name] = {'希望日': [], '不可日': []}
+
 #%%
-all_members = (dat_tochoku
- .filter(items=['name'])
- .drop_duplicates()
- .values.flatten().tolist()
-)
+all_members = (answered + no_asnwered)
 
 staffs = (dat_tochoku
           .query('position == "スタッフ"')
