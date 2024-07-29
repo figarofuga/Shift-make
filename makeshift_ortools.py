@@ -28,10 +28,13 @@ dat_tochoku = (dat
         .last()
         .drop(['タイムスタンプ'], axis=1)
         .reset_index()
-        .rename(columns={'お名前': 'name', 'あなたの立場は？': 'position'})
+        .rename(columns={'お名前': 'name', 
+                         'あなたの立場は？': 'position'})
         .assign(name=lambda x: x['name'].str.replace('[　 ]', '', regex=True))
         .rename(columns=lambda x: extract_date(x))
 )
+
+answered = dat_tochoku['name'].values.tolist()
 
 def create_availability_dict(df):
     result = {}
@@ -53,12 +56,24 @@ def create_availability_dict(df):
 
 availability_dict = create_availability_dict(dat_tochoku)
 
-all_members = dat_tochoku['name'].unique().tolist() + ["東絛誠也"]
-staffs = dat_tochoku.query('position == "スタッフ"')['name'].unique().tolist()
-residents = dat_tochoku.query('position == "レジデント"')['name'].unique().tolist()
-days_in_month = dat_tochoku.filter(regex=r'\d月\d{1,2}日').shape[1]
-holidays = [5, 6, 12, 13, 19, 20, 26, 27]
 
+answered_staffs = dat_tochoku.query('position == "スタッフ"')['name'].unique().tolist()
+no_snwered_staffs = []
+
+staffs = (answered_staffs + no_snwered_staffs)
+
+answered_residents = dat_tochoku.query('position == "レジデント"')['name'].unique().tolist()
+no_answered_residents = ["東絛誠也", "吉村梨沙", "星貴文"]
+
+residents = (answered_residents + no_answered_residents)
+
+all_members = (staffs + residents)
+
+days_in_month = dat_tochoku.filter(regex=r'\d月\d{1,2}日').shape[1]
+holidays = [1, 7, 8, 14, 15, 16, 21, 22, 23, 28, 29]
+holidays_index = [day - 1 for day in holidays] # Since Python is 0-indexed
+
+#%%
 # Google OR-Tools の Solver の作成
 solver = pywraplp.Solver.CreateSolver('SCIP')
 
@@ -86,28 +101,28 @@ objective.SetMinimization()
 # 各曜日のシフト人数の制約
 for day in range(days_in_month):
     if day + 1 in holidays:  # holiday
-        solver.Add(solver.Sum(x[(emp, day)] for emp in all_members) == 3)
-        solver.Add(solver.Sum(x[(emp, day)] for emp in staffs) >= 1)
-        solver.Add(solver.Sum(x[(emp, day)] for emp in residents) >= 1)
-    else:  # weekday
         solver.Add(solver.Sum(x[(emp, day)] for emp in all_members) == 4)
         solver.Add(solver.Sum(x[(emp, day)] for emp in staffs) >= 1)
         solver.Add(solver.Sum(x[(emp, day)] for emp in residents) >= 2)
+    else:  # weekday
+        solver.Add(solver.Sum(x[(emp, day)] for emp in all_members) == 3)
+        solver.Add(solver.Sum(x[(emp, day)] for emp in staffs) >= 1)
+        solver.Add(solver.Sum(x[(emp, day)] for emp in residents) >= 1)
 
 # 不可日の制約
 for emp in all_members:
-    for day in availability_dict[emp]['不可日']:
+    # 不可日のリストを取得。存在しない場合は空のリストを返す。
+    unavailable_days = availability_dict.get(emp, {}).get('不可日', [])
+    for day in unavailable_days:
         solver.Add(x[(emp, day)] == 0)
 
 # 担当者の間隔制約
 for emp in all_members:
     for day in range(days_in_month):
-        if day < 4:
-            solver.Add(solver.Sum(x[(emp, d)] for d in range(0, day + 5)) <= 1)
-        elif day > 4:
-            solver.Add(solver.Sum(x[(emp, d)] for d in range(day - 4, min(7, day + 5))) <= 1)
-        else:
-            solver.Add(solver.Sum(x[(emp, d)] for d in range(day - 4, 7)) <= 1)
+        if day >= 5:
+            # シフトが5日以上開く制約を追加
+            solver.Add(solver.Sum(x[(emp, d)] for d in range(day - 5, day)) <= 1)
+
 
 # 最小および最大シフト回数の制約
 for emp in all_members:
@@ -120,6 +135,7 @@ solver.Add(max_shifts - min_shifts <= 2)
 # 問題を解く
 status = solver.Solve()
 
+#%%
 # 結果の表示
 if status == pywraplp.Solver.OPTIMAL:
     for day in range(days_in_month):
@@ -128,10 +144,16 @@ if status == pywraplp.Solver.OPTIMAL:
 
     print("\n希望日と不可日:")
     for emp in all_members:
-        print(f'{emp} - 希望日: {availability_dict[emp]["希望日"]}, 不可日: {availability_dict[emp]["不可日"]}')
+        # 希望日と不可日を取得。存在しない場合は空のリストを返す
+        希望日 = availability_dict.get(emp, {}).get('希望日', [])
+        不可日 = availability_dict.get(emp, {}).get('不可日', [])
+        print(f'{emp} - 希望日: {希望日}, 不可日: {不可日}')
 
     print("\n各担当者のシフト回数:")
     for emp in all_members:
         print(f'{emp}: {shift_count[emp].solution_value()}回')
 else:
     print("Optimal solution not found.")
+
+
+# %%
