@@ -3,11 +3,12 @@
 # no_answered_residents = ["東絛誠也", "吉村梨沙", "星貴文"]
 # holidays = [1, 7, 8, 14, 15, 16, 21, 22, 23, 28, 29]
 #%%
-def makeshift(path, no_answered_residents, no_answered_staffs, holidays):
+def makeshift(month, no_answered_residents, no_answered_staffs, holidays):
   import re
   from ortools.linear_solver import pywraplp
   import pandas as pd
     # データの読み込みと前処理
+  path = f"rawdata/{month}m/2024年{month}月の日当直・ICU勤務・一次救急希望（回答）.xlsx"
   dat_proto = pd.read_excel(path)
 
   dat = (dat_proto
@@ -67,7 +68,7 @@ def makeshift(path, no_answered_residents, no_answered_staffs, holidays):
   answered_staffs = dat_tochoku.query('position == "スタッフ"')[
       'name'].unique().tolist()
 
-  staffs = (answered_staffs + no_snwered_staffs)
+  staffs = (answered_staffs + no_answered_staffs)
 
   answered_residents = dat_tochoku.query('position == "レジデント"')[
       'name'].unique().tolist()
@@ -142,24 +143,36 @@ def makeshift(path, no_answered_residents, no_answered_staffs, holidays):
 # 問題を解く
   status = solver.Solve()
 
-# %%
-# 結果の表示
+# 結果の表示と保存
+
+# 結果を格納するための空のリストを作成
+  shift_assignments = []
+  availability_summary = []
+  shift_counts = []
+
   if status == pywraplp.Solver.OPTIMAL:
+    # シフトの割り当て結果を DataFrame に変換
       for day in range(days_in_month):
-          assigned = [emp for emp in all_members if x[(
-              emp, day)].solution_value() == 1]
-          print(f'Day {day + 1}: {", ".join(assigned)}')
+          assigned = [emp for emp in all_members if x[(emp, day)].solution_value() == 1]
+          shift_assignments.append({'Day': day + 1, 'Assigned': ", ".join(assigned)})
 
-      print("\n希望日と不可日:")
+      shift_assignments_df = pd.DataFrame(shift_assignments)
+    
+    
+    # 各担当者のシフト回数を DataFrame に変換
       for emp in all_members:
-        # 希望日と不可日を取得。存在しない場合は空のリストを返す
-          希望日 = availability_dict.get(emp, {}).get('希望日', [])
-          不可日 = availability_dict.get(emp, {}).get('不可日', [])
-          print(f'{emp} - 希望日: {希望日}, 不可日: {不可日}')
+          shift_counts.append({'Name': emp, 'Shift Count': shift_count[emp].solution_value()})
+        
+      shift_counts_df = pd.DataFrame(shift_counts)
+    
+      print("Shift Assignments:")
+      print(shift_assignments_df)
 
-      print("\n各担当者のシフト回数:")
-      for emp in all_members:
-          print(f'{emp}: {shift_count[emp].solution_value()}回')
+      print("\nShift Counts:")
+      print(shift_counts_df)
   else:
       print("Optimal solution not found.")
 
+  return({"shift_assignment": shift_assignments_df, "shift_count": shift_counts_df})
+
+# %%

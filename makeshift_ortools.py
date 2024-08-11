@@ -136,24 +136,43 @@ solver.Add(max_shifts - min_shifts <= 2)
 status = solver.Solve()
 
 #%%
-# 結果の表示
+# 結果の表示と保存
+
+# 結果を格納するための空のリストを作成
+shift_assignments = []
+availability_summary = []
+shift_counts = []
+
 if status == pywraplp.Solver.OPTIMAL:
+    # シフトの割り当て結果を DataFrame に変換
     for day in range(days_in_month):
         assigned = [emp for emp in all_members if x[(emp, day)].solution_value() == 1]
-        print(f'Day {day + 1}: {", ".join(assigned)}')
+        shift_assignments.append({'Day': day + 1, 'Assigned': ", ".join(assigned)})
 
-    print("\n希望日と不可日:")
+    shift_assignments_df = pd.DataFrame(shift_assignments)
+    
+    # 希望日と不可日のサマリーを DataFrame に変換
     for emp in all_members:
-        # 希望日と不可日を取得。存在しない場合は空のリストを返す
         希望日 = availability_dict.get(emp, {}).get('希望日', [])
         不可日 = availability_dict.get(emp, {}).get('不可日', [])
-        print(f'{emp} - 希望日: {希望日}, 不可日: {不可日}')
+        availability_summary.append({'Name': emp, '希望日': 希望日, '不可日': 不可日})
 
-    print("\n各担当者のシフト回数:")
+    availability_summary_df = pd.DataFrame(availability_summary)
+    
+    # 各担当者のシフト回数を DataFrame に変換
     for emp in all_members:
-        print(f'{emp}: {shift_count[emp].solution_value()}回')
+        shift_counts.append({'Name': emp, 'Shift Count': shift_count[emp].solution_value()})
+        
+    shift_counts_df = pd.DataFrame(shift_counts)
+    
+    print("Shift Assignments:")
+    print(shift_assignments_df)
+
+    print("\nAvailability Summary:")
+    print(availability_summary_df)
+
+    print("\nShift Counts:")
+    print(shift_counts_df)
 else:
     print("Optimal solution not found.")
 
-
-# %%
