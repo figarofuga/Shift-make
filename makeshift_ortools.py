@@ -1,3 +1,49 @@
+
+# "rawdata/9m/2024年9月の日当直・ICU勤務・一次救急希望（回答）.xlsx"
+# no_answered_residents = ["東絛誠也", "吉村梨沙", "星貴文"]
+# holidays = [1, 7, 8, 14, 15, 16, 21, 22, 23, 28, 29]
+#%%
+
+import datetime
+import jpholiday
+
+def extract_holidays(yearmonth, add=None, remove=None):
+    # 年と月を取得
+    year = int(yearmonth[:4])
+    month = int(yearmonth[4:])
+    
+    # 月の最初と最後の日を取得
+    start_date = datetime.date(year, month, 1)
+    if month == 12:
+        end_date = datetime.date(year + 1, 1, 1) - datetime.timedelta(days=1)
+    else:
+        end_date = datetime.date(year, month + 1, 1) - datetime.timedelta(days=1)
+    
+    # 日付のリストを作成
+    holidays = []
+    current_date = start_date
+    while current_date <= end_date:
+        # 土日または祝日を確認
+        if current_date.weekday() >= 5 or jpholiday.is_holiday(current_date):
+            holidays.append(current_date.day)
+        current_date += datetime.timedelta(days=1)
+    
+    # addリストにある日付を追加
+    if add:
+        for day in add:
+            if day not in holidays:
+                holidays.append(day)
+    
+    # removeリストにある日付を削除
+    if remove:
+        for day in remove:
+            if day in holidays:
+                holidays.remove(day)
+    
+    holidays.sort()  # 日付を昇順にソート
+    return holidays
+
+
 #%%
 import re
 import pandas as pd
