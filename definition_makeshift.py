@@ -189,6 +189,6 @@ def makeshift(yearmonth, add=None, remove=None, no_answered_residents=None, no_a
     
         print("Shift Assignments:")
         print(shift_assignments_df)
-
-    return({"shift_assignment": shift_assignments_df, "shift_count": shift_counts_df})
+    print(holidays)
+    return({"shift_assignment": shift_assignments_df, "shift_count": shift_counts_df, "holidays": holidays})
 # %%
