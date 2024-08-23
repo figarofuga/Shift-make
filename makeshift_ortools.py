@@ -50,13 +50,13 @@ import pandas as pd
 from ortools.linear_solver import pywraplp
 
 # データの読み込みと前処理
-month = 9
+month = 10
 dat_proto = pd.read_excel(f"rawdata/{month}m/2024年{month}月の日当直・ICU勤務・一次救急希望（回答）.xlsx")
 
 dat = (dat_proto
        .assign(name=lambda x: x['お名前'].str.replace('[　 ]', '', regex=True))
        .assign(doctoryear=lambda x: x['あなたは医師何年目ですか？'].replace(r'年.*', '', regex=True).astype(int))
-       .rename(columns={'C日直以外の、日当直の該当者ですか？': 'tochoku_yn'})
+       .rename(columns={'C日直以外の日・当直の該当者ですか？': 'tochoku_yn'})
 )
 
 def extract_date(column_name):
@@ -109,14 +109,14 @@ no_snwered_staffs = []
 staffs = (answered_staffs + no_snwered_staffs)
 
 answered_residents = dat_tochoku.query('position == "レジデント"')['name'].unique().tolist()
-no_answered_residents = ["東絛誠也", "吉村梨沙", "星貴文"]
+no_answered_residents = ["小宮健太郎"]
 
 residents = (answered_residents + no_answered_residents)
 
 all_members = (staffs + residents)
 
 days_in_month = dat_tochoku.filter(regex=r'\d月\d{1,2}日').shape[1]
-holidays = [1, 7, 8, 14, 15, 16, 21, 22, 23, 28, 29]
+holidays = [5, 6, 12, 13, 14, 19, 20, 26, 27]
 holidays_index = [day - 1 for day in holidays] # Since Python is 0-indexed
 
 #%%
@@ -222,3 +222,5 @@ if status == pywraplp.Solver.OPTIMAL:
 else:
     print("Optimal solution not found.")
 
+
+# %%

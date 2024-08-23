@@ -12,21 +12,11 @@ import jpholiday
 from ortools.linear_solver import pywraplp
 import pandas as pd
 
-def makeshift(yearmonth, add=None, remove=None, no_answered_residents=None, no_answered_staffs=None):
-    # 引数の初期化
-    if no_answered_residents is None:
-        no_answered_residents = []
-    if no_answered_staffs is None:
-        no_answered_staffs = []
-
+def makeholidays(yearmonth):
     # 年と月を取得
     year = int(yearmonth[:4])
     month = int(yearmonth[4:])
-    
-    # データの読み込みと前処理
-    path = f"rawdata/{month}m/2024年{month}月の日当直・ICU勤務・一次救急希望（回答）.xlsx"
-    dat_proto = pd.read_excel(path)
-    
+
     # 月の最初と最後の日を取得
     start_date = datetime.date(year, month, 1)
     if month == 12:
@@ -42,23 +32,31 @@ def makeshift(yearmonth, add=None, remove=None, no_answered_residents=None, no_a
             holidays.append(current_date.day)
         current_date += datetime.timedelta(days=1)
     
-    if add:
-        for day in add:
-            if day not in holidays:
-                holidays.append(day)
-    
-    if remove:
-        for day in remove:
-            if day in holidays:
-                holidays.remove(day)
-    
     holidays.sort()  # 日付を昇順にソート
+    return holidays
+
+# October: [5, 6, 12, 13, 14, 19, 20, 26, 27]
+def makeshift(yearmonth, holidays, no_answered_residents=None, no_answered_staffs=None):
+    # 引数の初期化
+    if no_answered_residents is None:
+        no_answered_residents = []
+    if no_answered_staffs is None:
+        no_answered_staffs = []
+
+    # 年と月を取得
+    year = int(yearmonth[:4])
+    month = int(yearmonth[4:])
+    
+    # データの読み込みと前処理
+    path = f"rawdata/{month}m/2024年{month}月の日当直・ICU勤務・一次救急希望（回答）.xlsx"
+    dat_proto = pd.read_excel(path)
+    
     
     # データフレームの前処理
     dat = (dat_proto
            .assign(name=lambda x: x['お名前'].str.replace('[　 ]', '', regex=True))
            .assign(doctoryear=lambda x: x['あなたは医師何年目ですか？'].replace(r'年.*', '', regex=True).astype(int))
-           .rename(columns={'C日直以外の、日当直の該当者ですか？': 'tochoku_yn'})
+           .rename(columns={'C日直以外の日・当直の該当者ですか？': 'tochoku_yn'})
           )
 
     def extract_date(column_name):
@@ -168,14 +166,16 @@ def makeshift(yearmonth, add=None, remove=None, no_answered_residents=None, no_a
     # 最大シフト回数と最小シフト回数の差が2以下
     solver.Add(max_shifts - min_shifts <= 2)
 
+    # 初期化：結果の表示と保存
+    shift_assignments_df = pd.DataFrame()  # 初期化
+    shift_counts_df = pd.DataFrame()  # 初期化
+
     # 問題を解く
     status = solver.Solve()
 
-    # 結果の表示と保存
-    shift_assignments = []
-    shift_counts = []
-
     if status == pywraplp.Solver.OPTIMAL:
+        shift_assignments = []
+        shift_counts = []
         for day in range(days_in_month):
             assigned = [emp for emp in all_members if x[(emp, day)].solution_value() == 1]
             shift_assignments.append({'Day': day + 1, 'Assigned': ", ".join(assigned)})
@@ -189,6 +189,11 @@ def makeshift(yearmonth, add=None, remove=None, no_answered_residents=None, no_a
     
         print("Shift Assignments:")
         print(shift_assignments_df)
-    print(holidays)
-    return({"shift_assignment": shift_assignments_df, "shift_count": shift_counts_df, "holidays": holidays})
+    else:
+        print("No optimal solution found.")
+
+    return {"shift_assignment": shift_assignments_df, "shift_count": shift_counts_df}
+
+# %%
+makeshift(yearmonth="202410", holidays=[5, 6, 12, 13, 14, 19, 20, 26, 27], no_answered_residents=["小宮"])
 # %%
