@@ -104,11 +104,11 @@ availability_dict = create_availability_dict(dat_tochoku)
 
 
 answered_staffs = dat_tochoku.query('position == "スタッフ"')['name'].unique().tolist()
-no_snwered_staffs = []
+no_answered_staffs = []
 
-staffs = (answered_staffs + no_snwered_staffs)
+staffs = (answered_staffs + no_answered_staffs)
 
-answered_residents = dat_tochoku.query('position == "レジデント"')['name'].unique().tolist()
+answered_residents = dat_tochoku.query('position == "レジデント/フェロー"')['name'].unique().tolist()
 no_answered_residents = ["小宮健太郎"]
 
 residents = (answered_residents + no_answered_residents)
@@ -140,9 +140,13 @@ max_shifts = solver.IntVar(0, days_in_month, 'max_shifts')
 
 # 目的関数: シフト回数の差を最小化する
 objective = solver.Objective()
-objective.SetCoefficient(max_shifts, 1)
-objective.SetCoefficient(min_shifts, -1)
-objective.SetMinimization()
+for emp in all_members:
+    for day in range(days_in_month):
+        if day in availability_dict.get(emp, {}).get('希望日', []):
+            objective.SetCoefficient(x[(emp, day)], 1)
+        if day in availability_dict.get(emp, {}).get('不可日', []):
+            objective.SetCoefficient(x[(emp, day)], -500)
+objective.SetMaximization()
 
 # 各曜日のシフト人数の制約
 for day in range(days_in_month):
@@ -188,16 +192,26 @@ status = solver.Solve()
 shift_assignments = []
 availability_summary = []
 shift_counts = []
+penalty_details = []
+total_penalty = 0
 
-if status == pywraplp.Solver.OPTIMAL:
-    # シフトの割り当て結果を DataFrame に変換
+if status == pywraplp.Solver.OPTIMAL or status == pywraplp.Solver.FEASIBLE:
     for day in range(days_in_month):
         assigned = [emp for emp in all_members if x[(emp, day)].solution_value() == 1]
         shift_assignments.append({'Day': day + 1, 'Assigned': ", ".join(assigned)})
 
+         # ペナルティの計算
+        for emp in all_members:
+            if x[(emp, day)].solution_value() == 1:
+                if day in availability_dict.get(emp, {}).get('不可日', []):
+                    penalty_details.append({'Name': emp, 'Day': day + 1, 'Penalty': -500})
+                    total_penalty += -500
+                elif day in availability_dict.get(emp, {}).get('希望日', []):
+                    penalty_details.append({'Name': emp, 'Day': day + 1, 'Penalty': 1})
+                    total_penalty += 1
+
     shift_assignments_df = pd.DataFrame(shift_assignments)
     
-    # 希望日と不可日のサマリーを DataFrame に変換
     for emp in all_members:
         希望日 = availability_dict.get(emp, {}).get('希望日', [])
         不可日 = availability_dict.get(emp, {}).get('不可日', [])
@@ -205,7 +219,6 @@ if status == pywraplp.Solver.OPTIMAL:
 
     availability_summary_df = pd.DataFrame(availability_summary)
     
-    # 各担当者のシフト回数を DataFrame に変換
     for emp in all_members:
         shift_counts.append({'Name': emp, 'Shift Count': shift_count[emp].solution_value()})
         
@@ -219,8 +232,15 @@ if status == pywraplp.Solver.OPTIMAL:
 
     print("\nShift Counts:")
     print(shift_counts_df)
-else:
-    print("Optimal solution not found.")
+    
+    # 不可日に勤務が割り当てられた担当者の名前とその日付を出力
+    penalty_details_df = pd.DataFrame(penalty_details)
+    print("\nPenalty Details:")
+    print(penalty_details_df)
 
+    print(f"\nTotal Penalty: {total_penalty}")
+
+else:
+    print("No feasible solution found.")
 
 # %%

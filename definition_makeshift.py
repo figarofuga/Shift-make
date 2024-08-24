@@ -104,7 +104,7 @@ def makeshift(yearmonth, holidays, no_answered_residents=None, no_answered_staff
     answered_staffs = dat_tochoku.query('position == "スタッフ"')['name'].unique().tolist()
     staffs = answered_staffs + no_answered_staffs
 
-    answered_residents = dat_tochoku.query('position == "レジデント"')['name'].unique().tolist()
+    answered_residents = dat_tochoku.query('position == "レジデント/フェロー"')['name'].unique().tolist()
     residents = answered_residents + no_answered_residents
 
     all_members = staffs + residents
@@ -131,9 +131,13 @@ def makeshift(yearmonth, holidays, no_answered_residents=None, no_answered_staff
 
     # 目的関数: シフト回数の差を最小化する
     objective = solver.Objective()
-    objective.SetCoefficient(max_shifts, 1)
-    objective.SetCoefficient(min_shifts, -1)
-    objective.SetMinimization()
+    for emp in all_members:
+        for day in range(days_in_month):
+            if day in availability_dict.get(emp, {}).get('希望日', []):
+                objective.SetCoefficient(x[(emp, day)], 1)
+            if day in availability_dict.get(emp, {}).get('不可日', []):
+                objective.SetCoefficient(x[(emp, day)], -500)
+    objective.SetMaximization()
 
     # 各曜日のシフト人数の制約
     for day in range(days_in_month):
@@ -148,6 +152,7 @@ def makeshift(yearmonth, holidays, no_answered_residents=None, no_answered_staff
 
     # 不可日の制約
     for emp in all_members:
+        # 不可日のリストを取得。存在しない場合は空のリストを返す。
         unavailable_days = availability_dict.get(emp, {}).get('不可日', [])
         for day in unavailable_days:
             solver.Add(x[(emp, day)] == 0)
@@ -156,7 +161,9 @@ def makeshift(yearmonth, holidays, no_answered_residents=None, no_answered_staff
     for emp in all_members:
         for day in range(days_in_month):
             if day >= 5:
+                # シフトが5日以上開く制約を追加
                 solver.Add(solver.Sum(x[(emp, d)] for d in range(day - 5, day)) <= 1)
+
 
     # 最小および最大シフト回数の制約
     for emp in all_members:
@@ -166,22 +173,41 @@ def makeshift(yearmonth, holidays, no_answered_residents=None, no_answered_staff
     # 最大シフト回数と最小シフト回数の差が2以下
     solver.Add(max_shifts - min_shifts <= 2)
 
-    # 初期化：結果の表示と保存
-    shift_assignments_df = pd.DataFrame()  # 初期化
-    shift_counts_df = pd.DataFrame()  # 初期化
-
     # 問題を解く
     status = solver.Solve()
+    # 結果の表示と保存
 
-    if status == pywraplp.Solver.OPTIMAL:
-        shift_assignments = []
-        shift_counts = []
+    # 結果を格納するための空のリストを作成
+    shift_assignments = []
+    availability_summary = []
+    shift_counts = []
+    penalty_details = []
+    total_penalty = 0
+
+    if status == pywraplp.Solver.OPTIMAL or status == pywraplp.Solver.FEASIBLE:
         for day in range(days_in_month):
             assigned = [emp for emp in all_members if x[(emp, day)].solution_value() == 1]
             shift_assignments.append({'Day': day + 1, 'Assigned': ", ".join(assigned)})
 
+            # ペナルティの計算
+            for emp in all_members:
+                if x[(emp, day)].solution_value() == 1:
+                    if day in availability_dict.get(emp, {}).get('不可日', []):
+                        penalty_details.append({'Name': emp, 'Day': day + 1, 'Penalty': -500})
+                        total_penalty += -500
+                    elif day in availability_dict.get(emp, {}).get('希望日', []):
+                        penalty_details.append({'Name': emp, 'Day': day + 1, 'Penalty': 1})
+                        total_penalty += 1
+
         shift_assignments_df = pd.DataFrame(shift_assignments)
-        
+    
+        for emp in all_members:
+            希望日 = availability_dict.get(emp, {}).get('希望日', [])
+            不可日 = availability_dict.get(emp, {}).get('不可日', [])
+            availability_summary.append({'Name': emp, '希望日': 希望日, '不可日': 不可日})
+
+        availability_summary_df = pd.DataFrame(availability_summary)
+    
         for emp in all_members:
             shift_counts.append({'Name': emp, 'Shift Count': shift_count[emp].solution_value()})
         
@@ -189,10 +215,24 @@ def makeshift(yearmonth, holidays, no_answered_residents=None, no_answered_staff
     
         print("Shift Assignments:")
         print(shift_assignments_df)
-    else:
-        print("No optimal solution found.")
 
-    return {"shift_assignment": shift_assignments_df, "shift_count": shift_counts_df}
+        print("\nAvailability Summary:")
+        print(availability_summary_df)
+
+        print("\nShift Counts:")
+        print(shift_counts_df)
+    
+    # 不可日に勤務が割り当てられた担当者の名前とその日付を出力
+        penalty_details_df = pd.DataFrame(penalty_details)
+        print("\nPenalty Details:")
+        print(penalty_details_df)
+
+        print(f"\nTotal Penalty: {total_penalty}")
+
+    else:
+        print("No feasible solution found.")
+
+        return {"shift_assignment": shift_assignments_df, "shift_count": shift_counts_df, "pelaity_details": penalty_details_df, "total_penalty": total_penalty}
 
 # %%
 makeshift(yearmonth="202410", holidays=[5, 6, 12, 13, 14, 19, 20, 26, 27], no_answered_residents=["小宮"])
