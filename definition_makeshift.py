@@ -232,8 +232,15 @@ def makeshift(yearmonth, holidays, no_answered_residents=None, no_answered_staff
     else:
         print("No feasible solution found.")
 
-        return {"shift_assignment": shift_assignments_df, "shift_count": shift_counts_df, "pelaity_details": penalty_details_df, "total_penalty": total_penalty}
+    return {"shift_assignment": shift_assignments_df, "shift_count": shift_counts_df, "pelaity_details": penalty_details_df}
 
 # %%
-makeshift(yearmonth="202410", holidays=[5, 6, 12, 13, 14, 19, 20, 26, 27], no_answered_residents=["小宮"])
+res_10m = makeshift(yearmonth="202410", holidays=[5, 6, 12, 13, 14, 19, 20, 26, 27], no_answered_residents=["小宮"])
+# %%
+# Excel writerを使用してファイルに書き込む
+with pd.ExcelWriter('res_10m.xlsx') as writer:
+    for key, df in res_10m.items():
+        df.to_excel(writer, sheet_name=key, index=False)
+        
+        
 # %%
