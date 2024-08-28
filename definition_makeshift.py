@@ -157,13 +157,15 @@ def makeshift(yearmonth, holidays, no_answered_residents=None, no_answered_staff
         for day in unavailable_days:
             solver.Add(x[(emp, day)] == 0)
 
-    # 担当者の間隔制約
+   # 担当者の間隔制約
     for emp in all_members:
         for day in range(days_in_month):
             if day >= 5:
-                # シフトが5日以上開く制約を追加
+            # シフトが5日以上開く制約を追加（通常の方向）
                 solver.Add(solver.Sum(x[(emp, d)] for d in range(day - 5, day)) <= 1)
-
+            if day <= days_in_month - 6:
+            # シフトが5日以上開く制約を追加（逆方向）
+                solver.Add(solver.Sum(x[(emp, d)] for d in range(day + 1, day + 6)) <= 1)
 
     # 最小および最大シフト回数の制約
     for emp in all_members:

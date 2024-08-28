@@ -170,8 +170,11 @@ for emp in all_members:
 for emp in all_members:
     for day in range(days_in_month):
         if day >= 5:
-            # シフトが5日以上開く制約を追加
+        # シフトが5日以上開く制約を追加（通常の方向）
             solver.Add(solver.Sum(x[(emp, d)] for d in range(day - 5, day)) <= 1)
+        if day <= days_in_month - 6:
+        # シフトが5日以上開く制約を追加（逆方向）
+            solver.Add(solver.Sum(x[(emp, d)] for d in range(day + 1, day + 6)) <= 1)
 
 
 # 最小および最大シフト回数の制約
